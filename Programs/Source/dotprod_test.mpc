@@ -1,0 +1,18 @@
+from Compiler.GC.types import sbit, sbitint
+
+N_TIMES = 1000
+LENGTH = 1000
+
+a = sbitint.Array(LENGTH)
+b = sbitint.Array(LENGTH)
+
+for i in range(LENGTH):
+    a[i] = 1
+    b[i] = 0
+
+for i in range(N_TIMES - 1):
+    sbitint.dot_product(a, b)
+
+c = sbitint.dot_product(a, b)
+
+print_ln("%s", c.reveal())

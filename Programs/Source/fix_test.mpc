@@ -1,0 +1,4 @@
+a = sfix(0.1)
+b = sfix(0.3)
+
+print_ln("%s", (a * b).reveal())

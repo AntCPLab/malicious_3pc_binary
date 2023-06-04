@@ -1,0 +1,23 @@
+a = sint(3)
+b = sint(4)
+
+TIMES = 100000
+
+for _ in range(3):
+    for i in range(TIMES - 1):
+        a * b
+
+    c = a * b
+
+    for i in range(TIMES - 1):
+        b * c
+
+    a = b * c
+
+    for i in range(TIMES - 1):
+        a * c
+
+    b = a * c
+
+# print_ln("%s", e.reveal())
+# print_ln("%s", f.reveal())

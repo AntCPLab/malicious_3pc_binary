@@ -1,0 +1,6 @@
+from Compiler import program
+
+
+a = sint(123)
+
+print_ln("%s", (a >> 1).reveal())
