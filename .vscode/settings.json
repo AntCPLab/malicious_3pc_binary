@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "*.sage": "python",
-        "*.mpc": "python",
-        "chrono": "cpp"
-    }
-}
