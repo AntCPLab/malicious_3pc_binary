@@ -3,12 +3,15 @@
 
 #include <vector>
 #include "Tools/Hash.h"
+#include "Math/gf2n.h"
 
 using namespace std;
 
-typedef unsigned __int128 uint128_t;
+#define BLOCK_SIZE 64
 
-// clock_t begin_time, finish_time;
+typedef unsigned __int128 uint128_t;
+typedef gf2n_short Field;
+
 class LocalHash {
     octetStream buffer;
 public:
@@ -18,18 +21,43 @@ public:
         buffer.store(data);
     }
 
-    uint64_t final() {
+    Field final() {
         Hash hash;
         hash.reset();
         hash.update(buffer);
-        uint64_t result;
+        Field result;
         hash.final().get(result);
         return result;
+    }
+
+    void append_one_msg(Field msg) {
+        update(msg);
+    }
+
+    void append_msges(vector<Field> msges) {
+        for(Field msg: msges) {
+            update(msg);
+        }
+    }
+
+    Field get_challenge() {
+        Field r = final();
+        return r;
     }
 };
 
 struct DZKProof {
-    vector<vector<uint64_t>> p_evals_masked;
+    vector<vector<Field>> p_evals_masked;
+
+    void print_out() {
+        cout << "proof: ";
+        for(auto row: p_evals_masked) {
+            for(auto x: row) {
+                cout << x << " ";
+            }
+        }
+        cout << endl;
+    }
 
     size_t get_size() {
         size_t size = 0;
@@ -39,7 +67,7 @@ struct DZKProof {
         return size;
     }
 
-    uint64_t get_hash() {
+    Field get_hash() {
         LocalHash hash;
         for (auto p_eval : p_evals_masked) {
             for (auto each : p_eval) {
@@ -51,9 +79,9 @@ struct DZKProof {
 
     void pack(octetStream &os) {
         os.store(p_evals_masked.size());
-        os.store(p_evals_masked[0].size());
         for (auto each: p_evals_masked) {
-            for (uint64_t each_eval: each) {
+            os.store(each.size());
+            for (auto each_eval: each) {
                 os.store(each_eval);
             }
         }
@@ -64,51 +92,32 @@ struct DZKProof {
         size_t num_p_evals_masked_each = 0;
 
         os.get(num_p_evals_masked);
-        os.get(num_p_evals_masked_each);
         p_evals_masked.resize(num_p_evals_masked);
         for (size_t i = 0; i < num_p_evals_masked; i++) {
+            os.get(num_p_evals_masked_each);
             p_evals_masked[i].resize(num_p_evals_masked_each);
             for (size_t j = 0; j < num_p_evals_masked_each; j++) {
                 os.get(p_evals_masked[i][j]);
             }
         }
     }
-
-    void print_out() {
-        cout << "proof: ";
-        for(auto row: p_evals_masked) {
-            for(auto x: row) {
-                cout << x << " ";
-            }
-        }
-        cout << endl;
-    }
 };
 
 struct VerMsg {
-    vector<uint64_t> p_eval_ksum_ss;
-    vector<uint64_t> p_eval_r_ss;
-    uint64_t final_input;
-    uint64_t final_result_ss;
+    vector<Field> b_ss;
+    Field final_input;
+    Field final_result_ss;
 
     VerMsg() {}
-    VerMsg(vector<uint64_t> p_eval_ksum_ss, vector<uint64_t> p_eval_r_ss, uint64_t final_input, uint64_t final_result_ss) {
-        this->p_eval_ksum_ss = p_eval_ksum_ss;
-        this->p_eval_r_ss = p_eval_r_ss;
+    VerMsg(vector<Field> b_ss, Field final_input, Field final_result_ss) {
+        this->b_ss = b_ss;
         this->final_input = final_input;
         this->final_result_ss = final_result_ss;
     }
 
-    size_t get_size() {
-        return p_eval_ksum_ss.size() + p_eval_r_ss.size() + 2;
-    }
-
-    uint64_t get_hash() {
+    Field get_hash() {
         LocalHash hash;
-        for (uint64_t each: p_eval_ksum_ss) {
-            hash.update(each);
-        }
-        for (uint64_t each: p_eval_r_ss) {
+        for (Field each: b_ss) {
             hash.update(each);
         }
         hash.update(final_input);
@@ -117,76 +126,60 @@ struct VerMsg {
     }
 
     void pack(octetStream &os) {
-        os.store(p_eval_ksum_ss.size());
-        for(uint64_t i = 0; i < p_eval_ksum_ss.size(); i++) {
-            os.store(p_eval_ksum_ss[i]);
-        }
-        os.store(p_eval_r_ss.size());
-        for(uint64_t i = 0; i < p_eval_r_ss.size(); i++) {
-            os.store(p_eval_r_ss[i]);
+        os.store(b_ss.size());
+        for(size_t i = 0; i < b_ss.size(); i++) {
+            os.store(b_ss[i]);
         }
         os.store(final_input);
         os.store(final_result_ss);
     }
 
     void unpack(octetStream &os) {
-        uint64_t size = 0;
+        size_t size = 0;
         os.get(size);
-        p_eval_ksum_ss.resize(size);
-        for(uint64_t i = 0; i < size; i++) {
-            os.get(p_eval_ksum_ss[i]);
-        }
-        os.get(size);
-        p_eval_r_ss.resize(size);
-        for(uint64_t i = 0; i < size; i++) {
-            os.get(p_eval_r_ss[i]);
+        b_ss.resize(size);
+        for(size_t i = 0; i < size; i++) {
+            os.get(b_ss[i]);
         }
         os.get(final_input);
         os.get(final_result_ss);
     }
 };
 
-uint64_t get_rand();
-uint64_t** get_bases(uint64_t n);
-uint64_t* evaluate_bases(uint64_t n, uint64_t r);
+class Langrange {
+public:
+    static void get_bases(size_t n, Field** result);
+    static void evaluate_bases(size_t n, Field r, Field* result);
+};
 
-void append_one_msg(LocalHash &hash, uint64_t msg);
-void append_msges(LocalHash &hash, vector<uint64_t> msges);
-uint64_t get_challenge(LocalHash &hash);
+inline void Langrange::get_bases(size_t n, Field** result) {
+    for (size_t i = 0; i < n - 1; i++) {
+        for(size_t j = 0; j < n; j++) {
+            result[i][j] = 1;
+            for(size_t l = 0; l < n; l++) {
+                if (l != j) {
+                    Field denominator, numerator;
+                    denominator = Field(j) - Field(l);
+                    numerator = Field(i + n - l);
+                    result[i][j] = result[i][j] * denominator.invert() * numerator;
+                }
+            }
+        }
+    }
+}
 
-DZKProof prove(
-    uint64_t** input_left, 
-    uint64_t** input_right, 
-    uint64_t batch_size, 
-    uint64_t k, 
-    uint64_t sid,
-    uint64_t** masks
-);
-
-VerMsg gen_vermsg(
-    DZKProof proof, 
-    uint64_t** input,
-    uint64_t** input_mono, 
-    uint64_t batch_size, 
-    uint64_t k, 
-    uint64_t sid, 
-    uint64_t** masks_ss,
-    uint64_t prover_ID,
-    uint64_t party_ID
-);
-
-bool _verify(
-    DZKProof proof, 
-    uint64_t** input,
-    uint64_t** input_mono, 
-    VerMsg other_vermsg, 
-    uint64_t batch_size, 
-    uint64_t k, 
-    uint64_t sid, 
-    uint64_t** masks_ss,
-    uint64_t prover_ID,
-    uint64_t party_ID
-);
-
+inline void Langrange::evaluate_bases(size_t n, Field r, Field* result) {
+    for(size_t i = 0; i < n; i++) {
+        result[i] = 1;
+        for(size_t j = 0; j < n; j++) {
+            if (j != i) {
+                Field denominator, numerator; 
+                denominator = Field(i) - Field(j);
+                numerator = r - Field(j);
+                result[i] = result[i] * denominator.invert() * numerator;
+            }
+        }
+    }
+}
 
 #endif

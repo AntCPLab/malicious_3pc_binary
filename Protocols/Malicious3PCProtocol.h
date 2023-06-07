@@ -4,125 +4,37 @@
 #include "Replicated.h"
 #include "BinaryCheck.h"
 #include "Processor/Data_Files.h"
-#include "Math/mersenne.hpp"
 
 #include "queue"
 #include "SafeQueue.h"
 #include <thread>
-#include <mutex>
-#include <condition_variable>
 #include <fstream>
-
 #include <chrono>
 
 #define USE_THREAD
-
-// #ifdef USE_THREAD
-// #define Queue SafeQueue
-// #else
-// #define Queue queue
-// #endif
-
-// #define Queue SafeQueue
 
 template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
 class Player;
 
-
 struct StatusData {
     DZKProof proof;
-    uint64_t **input_shared_prev, **input_shared_next;
-    uint64_t **mask_ss_prev, **mask_ss_next;
-    int sz;
+    size_t node_id;
+    Field **mask_ss_prev, **mask_ss_next;
+    size_t sz;
 
     StatusData() {}
-    StatusData(DZKProof proof, uint64_t **input_shared_prev, uint64_t **input_shared_next, uint64_t **mask_ss_prev, uint64_t **mask_ss_next, int sz) : 
-        proof(proof), input_shared_prev(input_shared_prev), input_shared_next(input_shared_next), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
+    StatusData(DZKProof proof, size_t node_id, Field **mask_ss_prev, Field **mask_ss_next, size_t sz) : 
+        proof(proof), node_id(node_id), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
 };
 
-template <typename T1, typename T2>
-struct MyPair {
+struct ShareTupleBlock {
 public:
-    T1 first;
-    T2 second;
+    ShareTypeBlock input1, input2, result, rho;
 
-    MyPair(): first(0), second(0) {}
-    MyPair(T1 a, T2 b): first(a), second(b) {}
+    ShareTupleBlock(): input1(), input2(), result(), rho() {}
 };
-
-class WaitSize {
-
-private:
-    size_t now;
-    size_t target;
-    pthread_mutex_t mutex, mutex2;
-    pthread_cond_t cond;
-
-public:
-    WaitSize(): now(0) {}
-    WaitSize(size_t target): now(0), target(target) {}
-
-    void lock()
-    {
-        // cout << "in lock, calling pthread_mutex_lock" << endl;
-        pthread_mutex_lock(&mutex2);
-        // cout << "in lock, after calling pthread_mutex_lock" << endl;
-    }
-
-    void unlock()
-    {
-        // cout << "in unlock, calling pthread_mutex_unlock" << endl;
-        pthread_mutex_unlock(&mutex2);
-        // cout << "in unlock, after calling pthread_mutex_unlock" << endl;
-
-    }
-
-    void wait()
-    {
-        pthread_cond_wait(&cond, &mutex);
-    }
-
-    void signal()
-    {
-        pthread_cond_signal(&cond);
-    }
-
-    void set_target(size_t _target) {
-        target = _target;
-    }
-
-    void operator ++() {
-        // cout << "in WaitSize ++, calling lock " << endl;
-        lock();
-        now ++;
-        // cout << "now: " << now << ", target: " << target << endl;
-
-        if (now == target) {
-            // cout << "now == target, sending signal " << endl;
-            signal();
-            // pthread_mutex_unlock(&mutex);
-        }
-        // cout << "in WaitSize ++, calling unlock " << endl;
-        unlock();
-    }
-
-    void reset() {
-        now = 0;
-    }
-
-};
-
-typedef MyPair<bool, bool> ShareType;
-
-// struct ShareTuple {
-//     ShareType input1, input2, result, rho;
-// };
-
-
-// #define THREAD_NUM 5
-// #define MAX_STATUS 10
 
 /**
  * Three-party replicated secret sharing protocol with MAC modulo a power of two
@@ -132,10 +44,12 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef Malicious3PCProtocol This;
 
-    ShareType *input1, *input2, *results, *rhos;
+    ShareTupleBlock *share_tuple_blocks;
     size_t idx_input, idx_rho, idx_result;
-    size_t share_tuple_size;
+    size_t share_tuple_block_size;
     const size_t ZOOM_RATE = 2;
+
+    size_t MAX_LAYER_SIZE = 64000000; // 6400w
 
     StatusData *status_queue;
     vector<typename T::open_type> opened;
@@ -151,11 +65,7 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
 
     size_t local_counter, status_counter, status_pointer;
     WaitSize wait_size;
-
-    uint64_t two_inverse = Mersenne::inverse(2);
-
-    // const static size_t MAX_STATUS = 100;
-    // const static short THREAD_NUM = 4;
+    Field sid;
 
     vector<std::thread> check_threads, verify_threads;
 
@@ -172,14 +82,11 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, false_type);
 
-    // const static int BATCH_SIZE = OnlineOptions::singleton.batch_size;
-
 public:
 
     static const bool uses_triples = false;
 
     array<PRNG, 2> shared_prngs;
-    // array<PRNG, 2> *check_prngs;
     vector<array<PRNG, 2> > check_prngs;
 
     PRNG global_prng;
@@ -189,7 +96,28 @@ public:
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
+#ifdef DEBUG_BGIN19
+    cout << "in ~Malicious3PCProtocol" << endl;
+#endif
+        for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
+            cv.push(-1);
+        }
+        
+        for (auto &each_thread: check_threads) {
+            each_thread.join();
+        }
 
+        if (local_counter > 0) {
+            // cout << "local_counter = " << local_counter << endl;
+            Check_one(status_pointer, local_counter);
+            status_counter ++;
+        }
+
+        if (status_counter > 0) {
+            // cout << "status_counter = " << status_counter << endl;
+            verify();
+        }
+        
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             // cout << "in ~Malicious3PCProtocol, pushing false in cv" << endl;
             verify_queue.push(0);
@@ -202,7 +130,11 @@ public:
 
         cout << "Destroyed." << endl;
 
-        this->print_debug_info("Binary Part");
+        if (!check_passed) {
+            cout << "Check failed" << endl;
+        }
+
+        // this->print_debug_info("Binary Part");
         cout << "End Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
     }
     
@@ -210,7 +142,7 @@ public:
     static void assign(T& share, const typename T::clear& value, int my_num)
     {
         assert(T::vector_length == 2);
-        share.assign_zero();
+        share = 0;
         if (my_num < 2)
             share[my_num] = value;
     }
@@ -242,17 +174,52 @@ public:
         // return {P, shared_prngs, check_prngs};
     }
 
+    DZKProof _prove(
+        size_t node_id,
+        Field** masks,
+        size_t batch_size, 
+        Field sid,
+        PRNG prng
+    );
+
+    VerMsg _gen_vermsg(
+        DZKProof proof, 
+        size_t node_id,
+        Field** masks_ss,
+        size_t batch_size, 
+        Field sid,
+        size_t prover_ID,
+        size_t party_ID,
+        PRNG prng
+    );
+
+    bool _verify(
+        DZKProof proof, 
+        VerMsg other_vermsg, 
+        size_t node_id,
+        Field** masks_ss,
+        size_t batch_size, 
+        Field sid,
+        size_t prover_ID,
+        size_t party_ID,
+        PRNG prng
+    );
+
     void check();
     void finalize_check();
-    void Check_one(int node_id, int size = -1);
+    void Check_one(size_t node_id, int size = -1);
     void verify();
-    void thread_handler(int tid);
-    // void maybe_check();
-    int get_n_relevant_players() { return P.num_players() - 1; }
+    #ifdef TIMING
+    void thread_handler(size_t tid);
+    void verify_thread_handler(size_t tid);
+    #else
+    void thread_handler();
+    void verify_thread_handler();
+    #endif
 
+    size_t get_n_relevant_players() { return P.num_players() - 1; }
     void verify_part1(int prev_number, int my_number);
     void verify_part2(int next_number, int my_number);
-    void verify_thread_handler();
 
 };
 

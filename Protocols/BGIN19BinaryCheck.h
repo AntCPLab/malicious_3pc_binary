@@ -1,6 +1,5 @@
 #ifndef PROTOCOLS_BGIN19BINARYCHECK_H_
 #define PROTOCOLS_BGIN19BINARYCHECK_H_
-
 #include <vector>
 #include "Tools/Hash.h"
 #include "Math/gf2n.h"
@@ -10,7 +9,7 @@ using namespace std;
 #define BLOCK_SIZE 64
 
 typedef unsigned __int128 uint128_t;
-typedef gf2n_short Field;
+typedef gf2n_short BGIN19Field;
 
 class BGIN19LocalHash {
     octetStream buffer;
@@ -21,33 +20,33 @@ public:
         buffer.store(data);
     }
 
-    Field final() {
+    BGIN19Field final() {
         Hash hash;
         hash.reset();
         hash.update(buffer);
-        Field result;
+        BGIN19Field result;
         hash.final().get(result);
         return result;
     }
 
-    void append_one_msg(Field msg) {
+    void append_one_msg(BGIN19Field msg) {
         update(msg);
     }
 
-    void append_msges(vector<Field> msges) {
-        for(Field msg: msges) {
+    void append_msges(vector<BGIN19Field> msges) {
+        for(BGIN19Field msg: msges) {
             update(msg);
         }
     }
 
-    Field get_challenge() {
-        Field r = final();
+    BGIN19Field get_challenge() {
+        BGIN19Field r = final();
         return r;
     }
 };
 
 struct BGIN19DZKProof {
-    vector<vector<Field>> p_evals_masked;
+    vector<vector<BGIN19Field>> p_evals_masked;
 
     void print_out() {
         cout << "proof: ";
@@ -67,7 +66,7 @@ struct BGIN19DZKProof {
         return size;
     }
 
-    Field get_hash() {
+    BGIN19Field get_hash() {
         BGIN19LocalHash hash;
         for (auto p_eval : p_evals_masked) {
             for (auto each : p_eval) {
@@ -104,20 +103,20 @@ struct BGIN19DZKProof {
 };
 
 struct BGIN19VerMsg {
-    vector<Field> b_ss;
-    Field final_input;
-    Field final_result_ss;
+    vector<BGIN19Field> b_ss;
+    BGIN19Field final_input;
+    BGIN19Field final_result_ss;
 
     BGIN19VerMsg() {}
-    BGIN19VerMsg(vector<Field> b_ss, Field final_input, Field final_result_ss) {
+    BGIN19VerMsg(vector<BGIN19Field> b_ss, BGIN19Field final_input, BGIN19Field final_result_ss) {
         this->b_ss = b_ss;
         this->final_input = final_input;
         this->final_result_ss = final_result_ss;
     }
 
-    Field get_hash() {
+    BGIN19Field get_hash() {
         BGIN19LocalHash hash;
-        for (Field each: b_ss) {
+        for (BGIN19Field each: b_ss) {
             hash.update(each);
         }
         hash.update(final_input);
@@ -146,21 +145,21 @@ struct BGIN19VerMsg {
     }
 };
 
-class Langrange {
+class BGIN19Langrange {
 public:
-    static void get_bases(size_t n, Field** result);
-    static void evaluate_bases(size_t n, Field r, Field* result);
+    static void get_bases(size_t n, BGIN19Field** result);
+    static void evaluate_bases(size_t n, BGIN19Field r, BGIN19Field* result);
 };
 
-inline void Langrange::get_bases(size_t n, Field** result) {
+inline void BGIN19Langrange::get_bases(size_t n, BGIN19Field** result) {
     for (size_t i = 0; i < n - 1; i++) {
         for(size_t j = 0; j < n; j++) {
             result[i][j] = 1;
             for(size_t l = 0; l < n; l++) {
                 if (l != j) {
-                    Field denominator, numerator;
-                    denominator = Field(j) - Field(l);
-                    numerator = Field(i + n - l);
+                    BGIN19Field denominator, numerator;
+                    denominator = BGIN19Field(j) - BGIN19Field(l);
+                    numerator = BGIN19Field(i + n - l);
                     result[i][j] = result[i][j] * denominator.invert() * numerator;
                 }
             }
@@ -168,14 +167,14 @@ inline void Langrange::get_bases(size_t n, Field** result) {
     }
 }
 
-inline void Langrange::evaluate_bases(size_t n, Field r, Field* result) {
+inline void BGIN19Langrange::evaluate_bases(size_t n, BGIN19Field r, BGIN19Field* result) {
     for(size_t i = 0; i < n; i++) {
         result[i] = 1;
         for(size_t j = 0; j < n; j++) {
             if (j != i) {
-                Field denominator, numerator; 
-                denominator = Field(i) - Field(j);
-                numerator = r - Field(j);
+                BGIN19Field denominator, numerator; 
+                denominator = BGIN19Field(i) - BGIN19Field(j);
+                numerator = r - BGIN19Field(j);
                 result[i] = result[i] * denominator.invert() * numerator;
             }
         }

@@ -27,6 +27,7 @@ OnlineOptions::OnlineOptions() : playerno(-1)
     max_status = 50;
     thread_number = 10;
     k_size = 8;
+    k2_size = 8;
     verify_threshold = 1000;
     memtype = "empty";
     bits_from_squares = false;
@@ -125,6 +126,16 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
     );
 
     opt.add(
+        "8", // Default.
+        0, // Required?
+        1, // Number of args expected.
+        0, // Delimiter if expecting multiple args.
+        "Second Compression parameter", // Help description.
+        "-k2", // Flag token.
+        "--compression2" // Flag token.
+    );
+
+    opt.add(
         "100000", // Default.
         0, // Required?
         1, // Number of args expected.
@@ -178,6 +189,9 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
     
     opt.get("-k")->getInt(k_size);
     opt.get("--compression")->getInt(k_size);
+
+    opt.get("-k2")->getInt(k2_size);
+    opt.get("--compression2")->getInt(k2_size);
 
     opt.get("-bb")->getInt(binary_batch_size);
     opt.get("--binary-batchsize")->getInt(binary_batch_size);
@@ -361,6 +375,7 @@ OnlineOptions::OnlineOptions(ez::ezOptionParser& opt, int argc,
     opt.get("-b")->getInt(batch_size);
 
     opt.get("-k")->getInt(k_size);
+    opt.get("-k2")->getInt(k2_size);
     opt.get("-bb")->getInt(binary_batch_size);
     opt.get("-ms")->getInt(max_status);
     opt.get("-tn")->getInt(thread_number);

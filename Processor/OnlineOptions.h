@@ -26,6 +26,7 @@ public:
     int max_status;
     int thread_number;
     int k_size;
+    int k2_size;
     int verify_threshold;
     std::string memtype;
     bool bits_from_squares;

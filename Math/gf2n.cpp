@@ -551,3 +551,130 @@ void collapse_byte(int& b,const gf2n_short& aa)
 template class gf2n_<word>;
 template class gf2n_<octet>;
 template class gf2n_<int128> ;
+
+gf2n_long inner_product(gf2n_long* x, gf2n_long* y, size_t length) {
+  gf2n_long answer;
+  int128 tmp = 0;
+  for (size_t i = 0; i < length; ++i) {
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
+  }
+
+  gf2n_long::internal_type hi,lo;
+  int128 _tmp = (tmp);
+  _tmp.to(lo);
+  hi = 0;
+  answer.reduce(hi, lo);
+
+  return answer;
+}
+
+gf2n_long inner_product(gf2n_long* x, vector<gf2n_long> y, size_t length) {
+  gf2n_long answer;
+  int128 tmp = 0;
+  for (size_t i = 0; i < length; ++i) {
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
+  }
+
+  gf2n_long::internal_type hi,lo;
+  int128 _tmp = (tmp);
+  _tmp.to(lo);
+  hi = 0;
+  answer.reduce(hi, lo);
+
+  return answer;
+}
+
+gf2n_long inner_product(gf2n_long** x, gf2n_long** y, size_t rows, size_t cols) {
+  gf2n_long answer;
+  int128 tmp = 0;
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      tmp ^= clmul<0>(int128(x[i][j].get()).a, int128(y[i][j].get()).a);
+    }
+  }
+
+  gf2n_long::internal_type hi,lo;
+  int128 _tmp = (tmp);
+  _tmp.to(lo);
+  hi = 0;
+  answer.reduce(hi, lo);
+
+  return answer;
+}
+
+gf2n_long inner_product(gf2n_long** x, gf2n_long* y, size_t rows, size_t cols) {
+  gf2n_long answer;
+  int128 tmp = 0;
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      tmp ^= clmul<0>(int128(x[i][j].get()).a, int128(y[j].get()).a);
+    }
+  }
+
+  gf2n_long::internal_type hi,lo;
+  int128 _tmp = (tmp);
+  _tmp.to(lo);
+  hi = 0;
+  answer.reduce(hi, lo);
+
+  return answer;
+}
+
+// ============================================================
+
+
+gf2n_short inner_product(gf2n_short* x, gf2n_short* y, size_t length) {
+  gf2n_short answer;
+  int128 tmp = 0;
+  for (size_t i = 0; i < length; ++i) {
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
+  }
+
+  int128 _tmp = (tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}
+
+gf2n_short inner_product(gf2n_short* x, vector<gf2n_short> y, size_t length) {
+  gf2n_short answer;
+  int128 tmp = 0;
+  for (size_t i = 0; i < length; ++i) {
+    tmp ^= clmul<0>(int128(x[i].get()).a, int128(y[i].get()).a);
+  }
+
+  int128 _tmp = (tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}
+
+gf2n_short inner_product(gf2n_short** x, gf2n_short** y, size_t rows, size_t cols) {
+  gf2n_short answer;
+  int128 tmp = 0;
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      tmp ^= clmul<0>(int128(x[i][j].get()).a, int128(y[i][j].get()).a);
+    }
+  }
+
+  int128 _tmp = (tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}
+
+gf2n_short inner_product(gf2n_short** x, gf2n_short* y, size_t rows, size_t cols) {
+  gf2n_short answer;
+  int128 tmp = 0;
+  for (size_t i = 0; i < rows; ++i) {
+    for (size_t j = 0; j < cols; ++j) {
+      tmp ^= clmul<0>(int128(x[i][j].get()).a, int128(y[j].get()).a);
+    }
+  }
+
+  int128 _tmp = (tmp);
+  answer.reduce(_tmp.get_upper(), _tmp.get_lower());
+
+  return answer;
+}

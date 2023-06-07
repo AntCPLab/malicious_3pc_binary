@@ -11,6 +11,7 @@
 #include "SpdzWiseShare.h"
 #include "SpdzWise.h"
 #include "Math/Z2k.h"
+#include "Rep3Share2k.h"
 
 template<class T> class HashMaliciousRepMC;
 template<class T> class MaliciousRepPrepWithBits;
@@ -45,7 +46,6 @@ public:
 
     // typedef GC::BGIN19Secret bit_type;
     typedef GC::SemiHonestRepSecret bit_type;
-
 
     // indicate security relevance of field size
     typedef T mac_key_type;

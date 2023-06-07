@@ -11,9 +11,9 @@
 template <class _T>
 BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     size_t node_id,
-    Field** masks,
+    BGIN19Field** masks,
     size_t batch_size, 
-    Field sid,
+    BGIN19Field sid,
     PRNG prng
 ) {
     size_t k = OnlineOptions::singleton.k_size;
@@ -22,27 +22,27 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     // cout << "batch_size: " << T << ", s: " << s << endl;
 
     // Vectors of masked evaluations of polynomial p(X)
-    vector<vector<Field>> p_evals_masked;
+    vector<vector<BGIN19Field>> p_evals_masked;
     size_t k_max = k > k2 ? k : k2;
     // cout << "k: " << k << ", k2: " << k2 << ", k_max: " << k_max << endl;
 
     // Evaluations of polynomial p(X)
-    Field* eval_p_poly = new Field[2 * k_max - 1];  
+    BGIN19Field* eval_p_poly = new BGIN19Field[2 * k_max - 1];  
 
-    Field** base = new Field*[k_max - 1];
+    BGIN19Field** base = new BGIN19Field*[k_max - 1];
     for (size_t i = 0; i < k_max - 1; i++) {
-        base[i] = new Field[k_max];
+        base[i] = new BGIN19Field[k_max];
     }
     
-    Field** eval_result = new Field*[k_max];
+    BGIN19Field** eval_result = new BGIN19Field*[k_max];
     for(size_t i = 0; i < k_max; i++) {
-        eval_result[i] = new Field[k_max];
+        eval_result[i] = new BGIN19Field[k_max];
         for (size_t j = 0; j < k_max; j++) {
             eval_result[i][j] = 0;
         }
     }
 
-    Field* eval_base = new Field[k_max];
+    BGIN19Field* eval_base = new BGIN19Field[k_max];
 
     // ===============================  First Round  ===============================
 
@@ -57,7 +57,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     BGIN19LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
     
-    ShareTupleBlock k_share_tuple_blocks[k];
+    BGIN19ShareTupleBlock k_share_tuple_blocks[k];
     // works for binary_batch_size % BLOCK_SIZE = 0
     size_t start_point = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size / BLOCK_SIZE;
     size_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
@@ -70,7 +70,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     // bs = 6400, s = 800 -> 832
     s = padded_s; // key bug
 
-    Field* thetas = new Field[s];
+    BGIN19Field* thetas = new BGIN19Field[s];
     for(size_t j = 0; j < s; j++) {
         thetas[j].randomize(prng);
     }
@@ -78,21 +78,21 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
 
         // fetch k tuple_blocks
-        // memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
+        // memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
         if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
-            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
             for (size_t i = total_blocks_num - cur_k_blocks; i < k; i++)
-                k_share_tuple_blocks[i] = ShareTupleBlock();
+                k_share_tuple_blocks[i] = BGIN19ShareTupleBlock();
         }
         else {
-            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * k);
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * k);
         }
         
         for(size_t i = 0; i < k; i++) { 
-            ShareTupleBlock row_tuple_block = k_share_tuple_blocks[i];
+            BGIN19ShareTupleBlock row_tuple_block = k_share_tuple_blocks[i];
             
             for(size_t j = 0; j < k; j++) {  
-                ShareTupleBlock col_tuple_block = k_share_tuple_blocks[j];
+                BGIN19ShareTupleBlock col_tuple_block = k_share_tuple_blocks[j];
 
                 // x_i * y_{i-1} + y_i * x_{i-1}
                 long this_value_block = (row_tuple_block.input1.first & col_tuple_block.input2.second) ^ (row_tuple_block.input2.first & col_tuple_block.input1.second);
@@ -111,7 +111,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
         eval_p_poly[i] = eval_result[i][i];
     }
 
-    Langrange::get_bases(k, base);
+    BGIN19Langrange::get_bases(k, base);
 
     for(size_t i = 0; i < k - 1; i++) {
         eval_p_poly[i + k] = 0;
@@ -131,7 +131,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
 
     size_t cnt = 0;
 
-    vector<Field> ss(2 * k - 1);       
+    vector<BGIN19Field> ss(2 * k - 1);       
     for(size_t i = 0; i < 2 * k - 1; i++) {           
         ss[i] = eval_p_poly[i] - masks[cnt][i];
     }
@@ -142,34 +142,34 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
 
     // cout << "checkpoint 2" << endl;
     transcript_hash.append_msges(ss);
-    Field r = transcript_hash.get_challenge();
+    BGIN19Field r = transcript_hash.get_challenge();
 
     cnt++;
 
-    Langrange::evaluate_bases(k, r, eval_base);
+    BGIN19Langrange::evaluate_bases(k, r, eval_base);
 
     s *= 2;
     size_t s0 = s;
     // use k2 as the compression parameter from the second round
     s = (s - 1) / k2 + 1;
  
-    Field **input_left, **input_right;
-    input_left = new Field*[k2];
-    input_right = new Field*[k2];
+    BGIN19Field **input_left, **input_right;
+    input_left = new BGIN19Field*[k2];
+    input_right = new BGIN19Field*[k2];
 
     for(size_t i = 0; i < k2; i++) {
-        input_left[i] = new Field[s];
-        input_right[i] = new Field[s];
+        input_left[i] = new BGIN19Field[s];
+        input_right[i] = new BGIN19Field[s];
     }
 
     size_t index = 0;
     cur_k_blocks = 0;
 
     uint64_t table_size = 1 << k;
-    Field* input_table = new Field[table_size];
+    BGIN19Field* input_table = new BGIN19Field[table_size];
 
     for (uint64_t i = 0; i < table_size; i++) {
-        Field sum = 0;
+        BGIN19Field sum = 0;
         for (uint64_t j = 0; j < k; j++) {
             if ((i >> j) & 1)
                 sum += eval_base[j];
@@ -188,19 +188,19 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
 
         // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-        // memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
+        // memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
         if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
-            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
             for (size_t i = total_blocks_num - cur_k_blocks; i < k; i++)
-                k_share_tuple_blocks[i] = ShareTupleBlock();
+                k_share_tuple_blocks[i] = BGIN19ShareTupleBlock();
         }
         else {
-            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * k);
+            memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * k);
         }
 
         for (uint64_t i = 0; i < k; i++) {
 
-            ShareTupleBlock cur_block = k_share_tuple_blocks[i];
+            BGIN19ShareTupleBlock cur_block = k_share_tuple_blocks[i];
 
             bit_blocks_left1[i] = cur_block.input1.first;
             bit_blocks_left2[i] = cur_block.input2.first;
@@ -262,7 +262,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
         start = std::chrono::high_resolution_clock::now();
     #endif
 
-    Langrange::get_bases(k2, base);
+    BGIN19Langrange::get_bases(k2, base);
 
     while(true){
 
@@ -286,7 +286,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
             }
         }
 
-        vector<Field> ss(2 * k2 - 1);       
+        vector<BGIN19Field> ss(2 * k2 - 1);       
         for (size_t i = 0; i < 2 * k2 - 1; i++) {           
             ss[i] = eval_p_poly[i] - masks[cnt][i];
         }
@@ -299,7 +299,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
         transcript_hash.append_msges(ss);
         r = transcript_hash.get_challenge();
 
-        Langrange::evaluate_bases(k2, r, eval_base);
+        BGIN19Langrange::evaluate_bases(k2, r, eval_base);
 
         s0 = s;
         s = (s - 1) / k2 + 1;
@@ -311,7 +311,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
                 index = i * s + j;
                
                 if (index < s0) {
-                    Field temp_result = 0;
+                    BGIN19Field temp_result = 0;
                     for(size_t l = 0; l < k2; l++) {
                         temp_result += eval_base[l] * input_left[l][index];
                     }
@@ -349,9 +349,9 @@ template <class _T>
 BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     BGIN19DZKProof proof, 
     size_t node_id,
-    Field** masks_ss,
+    BGIN19Field** masks_ss,
     size_t batch_size, 
-    Field sid,
+    BGIN19Field sid,
     size_t prover_ID,
     size_t party_ID,
     PRNG prng
@@ -362,8 +362,8 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
 
     size_t k_max = k > k2 ? k : k2;
 
-    Field* eval_base = new Field[k_max];
-    Field* eval_base_2k = new Field[2 * k_max - 1];    
+    BGIN19Field* eval_base = new BGIN19Field[k_max];
+    BGIN19Field* eval_base_2k = new BGIN19Field[2 * k_max - 1];    
 
     // ===============================  First Round  ===============================
     
@@ -375,18 +375,18 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     size_t s = (T - 1) / k + 1;
     size_t len = log(2 * s) / log(k2) + 2;
 
-    vector<Field> b_ss(len);
-    Field final_input = 0, final_result_ss = 0;
+    vector<BGIN19Field> b_ss(len);
+    BGIN19Field final_input = 0, final_result_ss = 0;
 
     // Transcript
     BGIN19LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
 
     size_t cnt = 0;
-    Field out_ss = 0, sum_ss = 0;
+    BGIN19Field out_ss = 0, sum_ss = 0;
 
     transcript_hash.append_msges(proof.p_evals_masked[cnt]);
-    Field r = transcript_hash.get_challenge();
+    BGIN19Field r = transcript_hash.get_challenge();
     
     // recover proof
     bool prev_party = ((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0;
@@ -402,7 +402,7 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     }
 
     // sample randomness betas
-    Field* betas = new Field[k];
+    BGIN19Field* betas = new BGIN19Field[k];
     for(size_t j = 0; j < k; j++) {
         betas[j] = 1; //.randomize(prng);
     }
@@ -416,13 +416,13 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     size_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
     size_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
     size_t cur_k_blocks = 0;
-    ShareTupleBlock k_share_tuple_blocks[k];
+    BGIN19ShareTupleBlock k_share_tuple_blocks[k];
 
     size_t padded_s = block_cols_num * BLOCK_SIZE;
 
     s = padded_s;
 
-    Field* thetas = new Field[s];
+    BGIN19Field* thetas = new BGIN19Field[s];
     for(size_t j = 0; j < s; j++) {
         thetas[j].randomize(prng);
     }
@@ -430,12 +430,12 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     if (prev_party) {
         for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
             if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
-                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
+                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
                 for (size_t i = total_blocks_num - cur_k_blocks; i < k; i++)
-                    k_share_tuple_blocks[i] = ShareTupleBlock();
+                    k_share_tuple_blocks[i] = BGIN19ShareTupleBlock();
             }
             else {
-                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * k);
+                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * k);
             }
 
             for (size_t i = 0; i < k; i++) { 
@@ -453,12 +453,12 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     else {
         for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
             if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
-                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
+                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
                 for (size_t i = total_blocks_num - cur_k_blocks; i < k; i++)
-                    k_share_tuple_blocks[i] = ShareTupleBlock();
+                    k_share_tuple_blocks[i] = BGIN19ShareTupleBlock();
             }
             else {
-                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * k);
+                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * k);
             }
 
             for (size_t i = 0; i < k; i++) { 
@@ -475,7 +475,7 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     
     b_ss[cnt] = sum_ss - out_ss;
 
-    Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
+    BGIN19Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
     out_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
 
     #ifdef TIMING
@@ -489,17 +489,17 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
 
     // new evaluations at random point r
 
-    Langrange::evaluate_bases(k, r, eval_base);
+    BGIN19Langrange::evaluate_bases(k, r, eval_base);
 
     s *= 2;
     size_t s0 = s;
     // use k2 as the compression parameter from the second round
     s = (s - 1) / k2 + 1;
  
-    Field **input = new Field*[k2];
+    BGIN19Field **input = new BGIN19Field*[k2];
 
     for(size_t i = 0; i < k2; i++) {
-        input[i] = new Field[s];
+        input[i] = new BGIN19Field[s];
     }
 
     size_t index = 0;
@@ -509,10 +509,10 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     int group_num = BLOCK_SIZE / k2;
     
     uint64_t table_size = 1 << k;
-    Field* input_table = new Field[table_size];
+    BGIN19Field* input_table = new BGIN19Field[table_size];
 
     for (uint64_t i = 0; i < table_size; i++) {
-        Field sum = 0;
+        BGIN19Field sum = 0;
         for (uint64_t j = 0; j < k; j++) {
             if ((i >> j) & 1)
                 sum += eval_base[j];
@@ -527,17 +527,17 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
 
         for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
             if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
-                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
+                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
                 for (size_t i = total_blocks_num - cur_k_blocks; i < k; i++)
-                    k_share_tuple_blocks[i] = ShareTupleBlock();
+                    k_share_tuple_blocks[i] = BGIN19ShareTupleBlock();
             }
             else {
-                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * k);
+                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * k);
             }
 
             for (uint64_t i = 0; i < k; i++) {
 
-                ShareTupleBlock cur_block = k_share_tuple_blocks[i];
+                BGIN19ShareTupleBlock cur_block = k_share_tuple_blocks[i];
 
                 bit_blocks_left1[i] = cur_block.input1.first;
                 bit_blocks_left2[i] = cur_block.input2.first;
@@ -591,12 +591,12 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
         for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
 
             if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
-                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
+                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
                 for (size_t i = total_blocks_num - cur_k_blocks; i < k; i++)
-                    k_share_tuple_blocks[i] = ShareTupleBlock();
+                    k_share_tuple_blocks[i] = BGIN19ShareTupleBlock();
             }
             else {
-                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(ShareTupleBlock) * k);
+                memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * k);
             }
 
             // k = 8, bits_num = 8, group_num = 8
@@ -674,12 +674,12 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
         if (s == 1) {
             r = transcript_hash.get_challenge();
 
-            Langrange::evaluate_bases(k2, r, eval_base);
+            BGIN19Langrange::evaluate_bases(k2, r, eval_base);
             for(size_t i = 0; i < k2; i++) {
                 final_input += eval_base[i] * input[i][0];
             }
 
-            Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
+            BGIN19Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
             final_result_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
 
             break;
@@ -687,10 +687,10 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
         
         r = transcript_hash.get_challenge();
 
-        Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
+        BGIN19Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
         out_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
 
-        Langrange::evaluate_bases(k2, r, eval_base);
+        BGIN19Langrange::evaluate_bases(k2, r, eval_base);
 
         s0 = s;
         s = (s - 1) / k2 + 1;
@@ -699,7 +699,7 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
             for (size_t j = 0; j < s; j++) {
                 index = i * s + j;
                 if (index < s0) {
-                    Field temp_result = 0;
+                    BGIN19Field temp_result = 0;
                     for(size_t l = 0; l < k2; l++) {
                         temp_result += eval_base[l] * input[l][index];
                     }
@@ -751,9 +751,9 @@ bool BGIN19Protocol<_T>::_verify(
     BGIN19DZKProof proof, 
     BGIN19VerMsg other_vermsg, 
     size_t node_id,
-    Field** masks_ss,
+    BGIN19Field** masks_ss,
     size_t batch_size, 
-    Field sid,
+    BGIN19Field sid,
     size_t prover_ID,
     size_t party_ID,
     PRNG prng
@@ -767,7 +767,7 @@ bool BGIN19Protocol<_T>::_verify(
     
     BGIN19VerMsg self_vermsg = _gen_vermsg(proof, node_id, masks_ss, batch_size, sid, prover_ID, party_ID, prng);
 
-    Field b;
+    BGIN19Field b;
 
     for(size_t i = 0; i < len; i++) {
         // Todo: Linear combination on all b_ss
@@ -777,8 +777,8 @@ bool BGIN19Protocol<_T>::_verify(
             return false;
         }
     }
-    Field res = self_vermsg.final_input * other_vermsg.final_input;
-    Field p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
+    BGIN19Field res = self_vermsg.final_input * other_vermsg.final_input;
+    BGIN19Field p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
     
     if(res != p_eval_r) {  
         return false;

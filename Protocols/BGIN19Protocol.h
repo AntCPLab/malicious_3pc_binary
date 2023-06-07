@@ -17,97 +17,23 @@ template<class T> class SubProcessor;
 template<class T> class MAC_Check_Base;
 class Player;
 
-struct StatusData {
+struct BGIN19StatusData {
     BGIN19DZKProof proof;
     size_t node_id;
-    Field **mask_ss_prev, **mask_ss_next;
+    BGIN19Field **mask_ss_prev, **mask_ss_next;
     size_t sz;
 
-    StatusData() {}
-    StatusData(BGIN19DZKProof proof, size_t node_id, Field **mask_ss_prev, Field **mask_ss_next, size_t sz) : 
+    BGIN19StatusData() {}
+    BGIN19StatusData(BGIN19DZKProof proof, size_t node_id, BGIN19Field **mask_ss_prev, BGIN19Field **mask_ss_next, size_t sz) : 
         proof(proof), node_id(node_id), mask_ss_prev(mask_ss_prev), mask_ss_next(mask_ss_next), sz(sz) {}
     
 };
 
-class WaitSize {
-
-private:
-    size_t now;
-    size_t target;
-    pthread_mutex_t mutex, mutex2;
-    pthread_cond_t cond;
-
-public:
-    WaitSize(): now(0) {}
-    WaitSize(size_t target): now(0), target(target) {}
-
-    void lock()
-    {
-        // cout << "in lock, calling pthread_mutex_lock" << endl;
-        pthread_mutex_lock(&mutex2);
-        // cout << "in lock, after calling pthread_mutex_lock" << endl;
-    }
-
-    void unlock()
-    {
-        // cout << "in unlock, calling pthread_mutex_unlock" << endl;
-        pthread_mutex_unlock(&mutex2);
-        // cout << "in unlock, after calling pthread_mutex_unlock" << endl;
-
-    }
-
-    void wait()
-    {
-        pthread_cond_wait(&cond, &mutex);
-    }
-
-    void signal()
-    {
-        pthread_cond_signal(&cond);
-    }
-
-    void set_target(size_t _target) {
-        target = _target;
-    }
-
-    void operator ++() {
-        // cout << "in WaitSize ++, calling lock " << endl;
-        lock();
-        now ++;
-        // cout << "now: " << now << ", target: " << target << endl;
-
-        if (now == target) {
-            // cout << "now == target, sending signal " << endl;
-            signal();
-            // pthread_mutex_unlock(&mutex);
-        }
-        // cout << "in WaitSize ++, calling unlock " << endl;
-        unlock();
-    }
-
-    void reset() {
-        now = 0;
-    }
-
-};
-
-template <typename T1, typename T2>
-struct MyPair {
-public:
-    T1 first;
-    T2 second;
-
-    MyPair(): first(0), second(0) {}
-    MyPair(T1 a, T2 b): first(a), second(b) {}
-};
-
-typedef MyPair<long, long> ShareTypeBlock;
-
-struct ShareTupleBlock {
+struct BGIN19ShareTupleBlock {
 public:
     ShareTypeBlock input1, input2, result, rho;
 
-    ShareTupleBlock(): input1(), input2(), result(), rho() {}
+    BGIN19ShareTupleBlock(): input1(), input2(), result(), rho() {}
 };
 
 /**
@@ -118,14 +44,14 @@ class BGIN19Protocol : public ProtocolBase<T> {
     typedef Replicated<T> super;
     typedef BGIN19Protocol This;
 
-    ShareTupleBlock *share_tuple_blocks;
+    BGIN19ShareTupleBlock *share_tuple_blocks;
     size_t idx_input, idx_rho, idx_result;
     size_t share_tuple_block_size;
     const size_t ZOOM_RATE = 2;
 
     size_t MAX_LAYER_SIZE = 64000000; // 6400w
 
-    StatusData *status_queue;
+    BGIN19StatusData *status_queue;
     vector<typename T::open_type> opened;
 
     array<octetStream, 2> os;
@@ -139,7 +65,7 @@ class BGIN19Protocol : public ProtocolBase<T> {
 
     size_t local_counter, status_counter, status_pointer;
     WaitSize wait_size;
-    Field sid;
+    BGIN19Field sid;
 
     vector<std::thread> check_threads, verify_threads;
 
@@ -251,18 +177,18 @@ public:
 
     BGIN19DZKProof _prove(
         size_t node_id,
-        Field** masks,
+        BGIN19Field** masks,
         size_t batch_size, 
-        Field sid,
+        BGIN19Field sid,
         PRNG prng
     );
 
     BGIN19VerMsg _gen_vermsg(
         BGIN19DZKProof proof, 
         size_t node_id,
-        Field** masks_ss,
+        BGIN19Field** masks_ss,
         size_t batch_size, 
-        Field sid,
+        BGIN19Field sid,
         size_t prover_ID,
         size_t party_ID,
         PRNG prng
@@ -272,9 +198,9 @@ public:
         BGIN19DZKProof proof, 
         BGIN19VerMsg other_vermsg, 
         size_t node_id,
-        Field** masks_ss,
+        BGIN19Field** masks_ss,
         size_t batch_size, 
-        Field sid,
+        BGIN19Field sid,
         size_t prover_ID,
         size_t party_ID,
         PRNG prng

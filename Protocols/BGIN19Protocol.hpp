@@ -14,8 +14,8 @@
 template <class T>
 BGIN19Protocol<T>::BGIN19Protocol(Player& P) : P(P) {
 
-    Field::reset();
-    Field::init_field(64);
+    BGIN19Field::reset();
+    BGIN19Field::init_field(64);
 
     cout << "Start Mal3pc at " << std::chrono::high_resolution_clock::now().time_since_epoch().count() << endl;
 
@@ -79,7 +79,7 @@ BGIN19Protocol<T>::BGIN19Protocol(Player& P) : P(P) {
 
     cout << "Using tuple size: " << share_tuple_block_size << endl;
 
-    share_tuple_blocks = new ShareTupleBlock[share_tuple_block_size];
+    share_tuple_blocks = new BGIN19ShareTupleBlock[share_tuple_block_size];
 
     vermsgs = new BGIN19VerMsg[OnlineOptions::singleton.max_status];
 }
@@ -435,15 +435,15 @@ void BGIN19Protocol<T>::Check_one(size_t node_id, int size) {
 
     // outfile << "Check one with size " << sz << endl; 
 
-    Field **masks, **mask_ss_next, **mask_ss_prev;
+    BGIN19Field **masks, **mask_ss_next, **mask_ss_prev;
 
-    masks = new Field*[cnt];
-    mask_ss_next = new Field*[cnt];
-    mask_ss_prev = new Field*[cnt];
+    masks = new BGIN19Field*[cnt];
+    mask_ss_next = new BGIN19Field*[cnt];
+    mask_ss_prev = new BGIN19Field*[cnt];
 
-    masks[0] = new Field[2 * k - 1];
-    mask_ss_next[0] = new Field[2 * k - 1];
-    mask_ss_prev[0] = new Field[2 * k - 1];
+    masks[0] = new BGIN19Field[2 * k - 1];
+    mask_ss_next[0] = new BGIN19Field[2 * k - 1];
+    mask_ss_prev[0] = new BGIN19Field[2 * k - 1];
 
     #ifdef DEBUG_BGIN19_CORRECTNESS_NOMASK
         for (size_t j = 0; j < 2 * k - 1; j ++) {
@@ -453,9 +453,9 @@ void BGIN19Protocol<T>::Check_one(size_t node_id, int size) {
         }
 
         for (size_t i = 1; i < cnt; i++) {
-            masks[i] = new Field[2 * k2 - 1];
-            mask_ss_next[i] = new Field[2 * k2 - 1];
-            mask_ss_prev[i] = new Field[2 * k2 - 1];
+            masks[i] = new BGIN19Field[2 * k2 - 1];
+            mask_ss_next[i] = new BGIN19Field[2 * k2 - 1];
+            mask_ss_prev[i] = new BGIN19Field[2 * k2 - 1];
 
             for (size_t j = 0; j < 2 * k2 - 1; j ++) {
                 mask_ss_next[i][j] = 0; 
@@ -471,9 +471,9 @@ void BGIN19Protocol<T>::Check_one(size_t node_id, int size) {
         }
 
         for (size_t i = 1; i < cnt; i++) {
-            masks[i] = new Field[2 * k2 - 1];
-            mask_ss_next[i] = new Field[2 * k2 - 1];
-            mask_ss_prev[i] = new Field[2 * k2 - 1];
+            masks[i] = new BGIN19Field[2 * k2 - 1];
+            mask_ss_next[i] = new BGIN19Field[2 * k2 - 1];
+            mask_ss_prev[i] = new BGIN19Field[2 * k2 - 1];
 
             for (size_t j = 0; j < 2 * k2 - 1; j ++) {
                 mask_ss_next[i][j].randomize(check_prngs[node_id % ms][1]);
