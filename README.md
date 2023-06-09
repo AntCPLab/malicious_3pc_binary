@@ -1,4 +1,4 @@
-# README Efficient 3PC for Binary Circuits with Application to Maliciously-Secure DNN Inference
+# Efficient 3PC for Binary Circuits with Application to Maliciously-Secure DNN Inference
 
 ## Introduction
 

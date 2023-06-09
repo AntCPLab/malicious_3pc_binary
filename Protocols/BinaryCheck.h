@@ -3,14 +3,14 @@
 
 #include <vector>
 #include "Tools/Hash.h"
-#include "Math/gf2n.h"
+#include "Math/mersenne.hpp"
 
 using namespace std;
 
 #define BLOCK_SIZE 64
 
 typedef unsigned __int128 uint128_t;
-typedef gf2n_short Field;
+typedef uint64_t Field;
 
 class LocalHash {
     octetStream buffer;
@@ -127,7 +127,7 @@ struct VerMsg {
 
     void pack(octetStream &os) {
         os.store(b_ss.size());
-        for(size_t i = 0; i < b_ss.size(); i++) {
+        for(uint64_t i = 0; i < b_ss.size(); i++) {
             os.store(b_ss[i]);
         }
         os.store(final_input);
@@ -135,10 +135,10 @@ struct VerMsg {
     }
 
     void unpack(octetStream &os) {
-        size_t size = 0;
+        uint64_t size = 0;
         os.get(size);
         b_ss.resize(size);
-        for(size_t i = 0; i < size; i++) {
+        for(uint64_t i = 0; i < size; i++) {
             os.get(b_ss[i]);
         }
         os.get(final_input);
@@ -148,35 +148,50 @@ struct VerMsg {
 
 class Langrange {
 public:
-    static void get_bases(size_t n, Field** result);
-    static void evaluate_bases(size_t n, Field r, Field* result);
+    static void get_bases(uint64_t n, Field** result);
+    static void evaluate_bases(uint64_t n, Field r, Field* result);
 };
 
-inline void Langrange::get_bases(size_t n, Field** result) {
-    for (size_t i = 0; i < n - 1; i++) {
-        for(size_t j = 0; j < n; j++) {
+inline void Langrange::get_bases(uint64_t n, Field** result) {
+    for (uint64_t i = 0; i < n - 1; i++) {
+        for(uint64_t j = 0; j < n; j++) {
             result[i][j] = 1;
-            for(size_t l = 0; l < n; l++) {
+            for(uint64_t l = 0; l < n; l++) {
                 if (l != j) {
                     Field denominator, numerator;
-                    denominator = Field(j) - Field(l);
-                    numerator = Field(i + n - l);
-                    result[i][j] = result[i][j] * denominator.invert() * numerator;
+                    if (j > l) {
+                        denominator = j - l;
+                    }
+                    else {
+                        denominator = Mersenne::neg(l - j);
+                    }
+                    numerator = i + n - l;
+                    result[i][j] = Mersenne::mul(result[i][j], Mersenne::mul(Mersenne::inverse(denominator), numerator));
                 }
             }
         }
     }
 }
 
-inline void Langrange::evaluate_bases(size_t n, Field r, Field* result) {
-    for(size_t i = 0; i < n; i++) {
+inline void Langrange::evaluate_bases(uint64_t n, Field r, Field* result) {
+    for(uint64_t i = 0; i < n; i++) {
         result[i] = 1;
-        for(size_t j = 0; j < n; j++) {
+        for(uint64_t j = 0; j < n; j++) {
             if (j != i) {
                 Field denominator, numerator; 
-                denominator = Field(i) - Field(j);
-                numerator = r - Field(j);
-                result[i] = result[i] * denominator.invert() * numerator;
+                if (i > j) { 
+                    denominator = i - j;
+                } 
+                else { 
+                    denominator = Mersenne::neg(j - i);
+                }
+                if (r > j) { 
+                    numerator = r - j; 
+                } 
+                else { 
+                    numerator = Mersenne::neg(j - r);
+                }
+                result[i] = Mersenne::mul(result[i], Mersenne::mul(Mersenne::inverse(denominator), numerator));
             }
         }
     }

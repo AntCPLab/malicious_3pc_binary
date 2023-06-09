@@ -49,7 +49,12 @@ class Malicious3PCProtocol : public ProtocolBase<T> {
     size_t share_tuple_block_size;
     const size_t ZOOM_RATE = 2;
 
-    size_t MAX_LAYER_SIZE = 64000000; // 6400w
+    size_t MAX_LAYER_SIZE = 64000000;
+
+    const Field two_inverse = Mersenne::inverse(2);
+    const Field neg_one = Mersenne::PR - 1;
+    const Field neg_two = Mersenne::PR - 2;
+    const Field neg_two_inverse = Mersenne::neg(two_inverse);
 
     StatusData *status_queue;
     vector<typename T::open_type> opened;
@@ -96,9 +101,7 @@ public:
     Malicious3PCProtocol(Player& P);
     Malicious3PCProtocol(Player& P, array<PRNG, 2>& prngs);
     ~Malicious3PCProtocol() {
-#ifdef DEBUG_BGIN19
-    cout << "in ~Malicious3PCProtocol" << endl;
-#endif
+
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             cv.push(-1);
         }
@@ -109,12 +112,14 @@ public:
 
         if (local_counter > 0) {
             // cout << "local_counter = " << local_counter << endl;
+            // cout << "this->bit_counter_aligned = " << this->bit_counter_aligned << endl;
+            // cout << "this->bit_counter = " << this->bit_counter << endl;
             Check_one(status_pointer, local_counter);
             status_counter ++;
         }
 
         if (status_counter > 0) {
-            // cout << "status_counter = " << status_counter << endl;
+            cout << "status_counter = " << status_counter << endl;
             verify();
         }
         
@@ -131,6 +136,7 @@ public:
         cout << "Destroyed." << endl;
 
         if (!check_passed) {
+            // throw mac_fail("Check failed");
             cout << "Check failed" << endl;
         }
 
@@ -178,8 +184,7 @@ public:
         size_t node_id,
         Field** masks,
         size_t batch_size, 
-        Field sid,
-        PRNG prng
+        Field sid
     );
 
     VerMsg _gen_vermsg(
@@ -189,8 +194,7 @@ public:
         size_t batch_size, 
         Field sid,
         size_t prover_ID,
-        size_t party_ID,
-        PRNG prng
+        size_t party_ID
     );
 
     bool _verify(
@@ -201,14 +205,14 @@ public:
         size_t batch_size, 
         Field sid,
         size_t prover_ID,
-        size_t party_ID,
-        PRNG prng
+        size_t party_ID
     );
 
     void check();
     void finalize_check();
     void Check_one(size_t node_id, int size = -1);
     void verify();
+
     #ifdef TIMING
     void thread_handler(size_t tid);
     void verify_thread_handler(size_t tid);
@@ -217,7 +221,9 @@ public:
     void verify_thread_handler();
     #endif
 
+    // void maybe_check();
     size_t get_n_relevant_players() { return P.num_players() - 1; }
+
     void verify_part1(int prev_number, int my_number);
     void verify_part2(int next_number, int my_number);
 
