@@ -11,6 +11,7 @@
 #include "Math/gfp.h"
 #include "ProtocolSet.h"
 #include "Malicious3PCShare.h"
+#include "BGIN19Share.h"
 
 #include "ReplicatedPrep.hpp"
 #include "Spdz2kPrep.hpp"
@@ -73,6 +74,20 @@ void buffer_bits_from_squares_in_ring(vector<Malicious3PCRingShare<K, S>>& bits,
 {
     assert(proc != 0);
     typedef Malicious3PCRingShare<K + 2, S> BitShare;
+    typename BitShare::MAC_Check MC(proc->MC.get_alphai());
+    DataPositions usage;
+    SquarePrep<BitShare> prep(usage);
+    SubProcessor<BitShare> bit_proc(MC, prep, proc->P, proc->Proc);
+    prep.set_proc(&bit_proc);
+    bits_from_square_in_ring(bits, OnlineOptions::singleton.batch_size, &prep);
+}
+
+template<int K, int S>
+void buffer_bits_from_squares_in_ring(vector<BGIN19RingShare<K, S>>& bits,
+        SubProcessor<BGIN19RingShare<K, S>>* proc)
+{
+    assert(proc != 0);
+    typedef BGIN19RingShare<K + 2, S> BitShare;
     typename BitShare::MAC_Check MC(proc->MC.get_alphai());
     DataPositions usage;
     SquarePrep<BitShare> prep(usage);

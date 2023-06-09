@@ -26,7 +26,7 @@ BGIN19Protocol<T>::BGIN19Protocol(Player& P) : P(P) {
 	if (not P.is_encrypted())
 		insecure("unencrypted communication");
 
-    status_queue = new StatusData[OnlineOptions::singleton.max_status];
+    status_queue = new BGIN19StatusData[OnlineOptions::singleton.max_status];
     
     shared_prngs[0].ReSeed();
 	octetStream os;
@@ -73,11 +73,10 @@ BGIN19Protocol<T>::BGIN19Protocol(Player& P) : P(P) {
 
     idx_input = idx_result = idx_rho = 0;
     // works for binary_batch_size % BLOCK_SIZE = 0
-    // share_tuple_block_size = OnlineOptions::singleton.binary_batch_size * OnlineOptions::singleton.max_status * ZOOM_RATE / BLOCK_SIZE;
     size_t total_batch_size = OnlineOptions::singleton.binary_batch_size * OnlineOptions::singleton.max_status; // key bug
     share_tuple_block_size = (MAX_LAYER_SIZE > total_batch_size ? MAX_LAYER_SIZE : total_batch_size) * ZOOM_RATE / BLOCK_SIZE;
 
-    cout << "Using tuple size: " << share_tuple_block_size << endl;
+    // cout << "Using tuple size: " << share_tuple_block_size << endl;
 
     share_tuple_blocks = new BGIN19ShareTupleBlock[share_tuple_block_size];
 
@@ -109,33 +108,10 @@ void BGIN19Protocol<T>::init_mul()
 	for (auto& o : os)
         o.reset_write_head();
     add_shares.clear();
-
-    // cout << "local_counter: " << local_counter << endl;
 }
 
 template <class T>
 void BGIN19Protocol<T>::finalize_check() {
-
-    // cout << "in finalize_check" << endl;
-
-    // for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-    //     cv.push(-1);
-    // }
-    
-    // for (auto &each_thread: check_threads) {
-    //     each_thread.join();
-    // }
-
-    // if (local_counter > 0) {
-    //     // cout << "local_counter = " << local_counter << endl;
-    //     Check_one(status_pointer, local_counter);
-    //     status_counter ++;
-    // }
-
-    // if (status_counter > 0) {
-    //     // cout << "status_counter = " << status_counter << endl;
-    //     verify();
-    // }
     
 }
 
@@ -156,12 +132,9 @@ void BGIN19Protocol<T>::thread_handler(int tid) {
         }
 
         if (_ == -1) {
-            outfile << "breaking thread_handler loop... tid: " << tid << endl;
-            
             break;
         }
 
-        outfile << "calling Check_one " << endl;
         Check_one(_);
         
     }
@@ -174,7 +147,6 @@ void BGIN19Protocol<T>::thread_handler(int tid) {
 #else
 template <class T>
 void BGIN19Protocol<T>::thread_handler() {
-
     int _ = -1;
     while (true) { 
         if (!cv.pop_dont_stop(_)) {
@@ -185,16 +157,7 @@ void BGIN19Protocol<T>::thread_handler() {
             break;
         }
 
-        #ifdef TIMING_CHECK_ONE
-        auto start = std::chrono::high_resolution_clock::now();
-        #endif
-
         Check_one(_);
-
-        #ifdef TIMING_CHECK_ONE
-        auto end = std::chrono::high_resolution_clock::now();
-        cout << "Check_one uses: " << (end - start).count() / 1e6 << " ms" << endl;
-        #endif
         
     }
     return ;
@@ -211,8 +174,7 @@ void BGIN19Protocol<T>::verify_part1(int prev_number, int my_number) {
     verify_lock.unlock();
 
     size_t sz = status_queue[i].sz;
-    // size_t k = OnlineOptions::singleton.k_size;
-    // size_t cnt = log(4 * sz) / log(k) + 1;
+
     #ifdef TIMING
     auto cp1 = std::chrono::high_resolution_clock::now();
     #endif
@@ -239,19 +201,21 @@ void BGIN19Protocol<T>::verify_part2(int next_number, int my_number) {
     verify_lock.unlock();
 
     size_t sz = status_queue[i].sz;
-    // size_t k = OnlineOptions::singleton.k_size;
 
-    // size_t cnt = log(4 * sz) / log(k) + 1;
     #ifdef TIMING
     auto cp1 = std::chrono::high_resolution_clock::now();
     #endif
 
-    check_passed = _verify(proof, received_vermsg, status_queue[i].node_id, status_queue[i].mask_ss_next, sz, sid, next_number, my_number, global_prng);
+    bool res = _verify(proof, received_vermsg, status_queue[i].node_id, status_queue[i].mask_ss_next, sz, sid, next_number, my_number, global_prng);
     
     #ifdef TIMING
     auto cp2 = std::chrono::high_resolution_clock::now();
     cout << "Verify uses " << (cp2 - cp1).count() / 1e6 << "ms." << endl;
     #endif
+
+    if (!res) {
+        check_passed = false;
+    }
 
     ++ verify_tag;
     
@@ -328,8 +292,6 @@ void BGIN19Protocol<T>::verify_thread_handler() {
 
 template <class T>
 void BGIN19Protocol<T>::verify() {
-    // cout << "in BGIN19Protocol::verify, this->bit_counter: " << this->bit_counter << endl;
-
     // ofstream outfile;
     // outfile.open("logs/Verify_" + to_string(P.my_real_num()), ios::app);
     
@@ -350,7 +312,6 @@ void BGIN19Protocol<T>::verify() {
     // outfile << "Verify with size " << size << endl;
 
     verify_index = 0;
-    check_passed = true;
     verify_tag.reset();
     verify_tag.set_target(size);
 
@@ -398,10 +359,6 @@ void BGIN19Protocol<T>::verify() {
     }
 
     verify_tag.wait();
-    // if (!check_passed) {
-    //     // throw mac_fail("Check failed");
-    //     // cout << "Check failed" << endl;
-    // }
 
     // auto cp4 = std::chrono::high_resolution_clock::now();
     // outfile << "Verify uses " << (cp4 - cp3).count() / 1e6 << "ms." << endl;
@@ -412,10 +369,9 @@ void BGIN19Protocol<T>::verify() {
 
 template <class T>
 void BGIN19Protocol<T>::Check_one(size_t node_id, int size) {
+
     // ofstream outfile;
     // outfile.open("logs/CheckOne_" + to_string(P.my_real_num()), ios::app);
-
-    // outfile << "Entering Check_one, node_id = " << node_id << endl;
 
     // auto cp0 = std::chrono::high_resolution_clock::now();
 
@@ -430,7 +386,6 @@ void BGIN19Protocol<T>::Check_one(size_t node_id, int size) {
     size_t k2 = OnlineOptions::singleton.k2_size;
     size_t _T = ((sz - 1) / k + 1) * k;
     size_t s = (_T - 1) / k + 1;
-    // size_t cnt = log(2 * _T) / log(k) + 1;
     size_t cnt = log(2 * s) / log(k2) + 2;
 
     // outfile << "Check one with size " << sz << endl; 
@@ -445,75 +400,42 @@ void BGIN19Protocol<T>::Check_one(size_t node_id, int size) {
     mask_ss_next[0] = new BGIN19Field[2 * k - 1];
     mask_ss_prev[0] = new BGIN19Field[2 * k - 1];
 
-    #ifdef DEBUG_BGIN19_CORRECTNESS_NOMASK
-        for (size_t j = 0; j < 2 * k - 1; j ++) {
-            mask_ss_next[0][j] = 0; 
-            mask_ss_prev[0][j] = 0; 
-            masks[0][j] = mask_ss_next[0][j] + mask_ss_prev[0][j];
+    for (size_t j = 0; j < 2 * k - 1; j ++) {
+        mask_ss_next[0][j].randomize(check_prngs[node_id % ms][1]);
+        mask_ss_prev[0][j].randomize(check_prngs[node_id % ms][0]);
+        masks[0][j] = mask_ss_next[0][j] + mask_ss_prev[0][j];
+    }
+
+    for (size_t i = 1; i < cnt; i++) {
+        masks[i] = new BGIN19Field[2 * k2 - 1];
+        mask_ss_next[i] = new BGIN19Field[2 * k2 - 1];
+        mask_ss_prev[i] = new BGIN19Field[2 * k2 - 1];
+
+        for (size_t j = 0; j < 2 * k2 - 1; j ++) {
+            mask_ss_next[i][j].randomize(check_prngs[node_id % ms][1]);
+            mask_ss_prev[i][j].randomize(check_prngs[node_id % ms][0]);
+            masks[i][j] = mask_ss_next[i][j] + mask_ss_prev[i][j];
         }
+    }
 
-        for (size_t i = 1; i < cnt; i++) {
-            masks[i] = new BGIN19Field[2 * k2 - 1];
-            mask_ss_next[i] = new BGIN19Field[2 * k2 - 1];
-            mask_ss_prev[i] = new BGIN19Field[2 * k2 - 1];
-
-            for (size_t j = 0; j < 2 * k2 - 1; j ++) {
-                mask_ss_next[i][j] = 0; 
-                mask_ss_prev[i][j] = 0;
-                masks[i][j] = mask_ss_next[i][j] + mask_ss_prev[i][j];
-            }
-        }
-    #else
-        for (size_t j = 0; j < 2 * k - 1; j ++) {
-            mask_ss_next[0][j].randomize(check_prngs[node_id % ms][1]);
-            mask_ss_prev[0][j].randomize(check_prngs[node_id % ms][0]);
-            masks[0][j] = mask_ss_next[0][j] + mask_ss_prev[0][j];
-        }
-
-        for (size_t i = 1; i < cnt; i++) {
-            masks[i] = new BGIN19Field[2 * k2 - 1];
-            mask_ss_next[i] = new BGIN19Field[2 * k2 - 1];
-            mask_ss_prev[i] = new BGIN19Field[2 * k2 - 1];
-
-            for (size_t j = 0; j < 2 * k2 - 1; j ++) {
-                mask_ss_next[i][j].randomize(check_prngs[node_id % ms][1]);
-                mask_ss_prev[i][j].randomize(check_prngs[node_id % ms][0]);
-                masks[i][j] = mask_ss_next[i][j] + mask_ss_prev[i][j];
-            }
-        }
-    #endif
-
-    #ifdef TIMING
-    auto cp2 = std::chrono::high_resolution_clock::now();
-    #endif
-
-    // cout << "Prepare data uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
+    // auto cp2 = std::chrono::high_resolution_clock::now();
+    // outfile << "Prepare data uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
 
 
-    // outfile << "in Check_one, calling prove" << endl;
-    // BGIN19DZKProof proof = _prove(input_left, input_right, masks, sz, k, sid, global_prng);
     BGIN19DZKProof proof = _prove(node_id, masks, sz, sid, global_prng);
 
-    #ifdef TIMING
-    auto cp3 = std::chrono::high_resolution_clock::now();
-
+    // auto cp3 = std::chrono::high_resolution_clock::now();
     // outfile << "Prove uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
-    cout << "Prove uses " << (cp3 - cp2).count() / 1e6 << "ms." << endl;
-    #endif
 
-    // outfile << "in Check_one, pushing status_queue, ID: " << node_id << endl;
-    status_queue[node_id % ms] = StatusData(proof,
+    status_queue[node_id % ms] = BGIN19StatusData(proof,
                                        node_id,
                                        mask_ss_next,
                                        mask_ss_prev,
                                        sz);
 
-    // outfile << "in Check_one, ++wait_size" << endl;
     ++wait_size;
-    // outfile << "in Check_one, after ++wait_size" << endl;
 
-    // outfile << "Finish check" << endl;
-    
+    // outfile << "Finish check" << endl; 
 }
 
 
@@ -523,8 +445,6 @@ void BGIN19Protocol<T>::prepare_mul(const T& x,
 {
     
     typename T::value_type add_share = x.local_mul(y);
-
-    // int this_size = (n == -1 ? T::value_type::length() : n);
 
     share_tuple_blocks[idx_input].input1 = ShareTypeBlock(x[0].get(), x[1].get());
     share_tuple_blocks[idx_input].input2 = ShareTypeBlock(y[0].get(), y[1].get());
@@ -604,14 +524,11 @@ inline T BGIN19Protocol<T>::finalize_mul(int n)
         idx_result = 0;
     }
     
-    // this->local_counter += this_size;
     this->local_counter += T::value_type::length();
     
     while (local_counter >= (size_t) OnlineOptions::singleton.binary_batch_size) {
         local_counter -= OnlineOptions::singleton.binary_batch_size;     
-        
-        // cout << "Indexes are: " << idx_input << " " << idx_rho << " " << idx_result << endl;
-        
+                
         cv.push(status_pointer);
 
         status_counter ++;

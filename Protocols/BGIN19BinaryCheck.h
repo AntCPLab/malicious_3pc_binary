@@ -145,13 +145,13 @@ struct BGIN19VerMsg {
     }
 };
 
-class BGIN19Langrange {
+class BGIN19Lagrange {
 public:
     static void get_bases(size_t n, BGIN19Field** result);
     static void evaluate_bases(size_t n, BGIN19Field r, BGIN19Field* result);
 };
 
-inline void BGIN19Langrange::get_bases(size_t n, BGIN19Field** result) {
+inline void BGIN19Lagrange::get_bases(size_t n, BGIN19Field** result) {
     for (size_t i = 0; i < n - 1; i++) {
         for(size_t j = 0; j < n; j++) {
             result[i][j] = 1;
@@ -167,7 +167,7 @@ inline void BGIN19Langrange::get_bases(size_t n, BGIN19Field** result) {
     }
 }
 
-inline void BGIN19Langrange::evaluate_bases(size_t n, BGIN19Field r, BGIN19Field* result) {
+inline void BGIN19Lagrange::evaluate_bases(size_t n, BGIN19Field r, BGIN19Field* result) {
     for(size_t i = 0; i < n; i++) {
         result[i] = 1;
         for(size_t j = 0; j < n; j++) {

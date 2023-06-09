@@ -44,8 +44,7 @@ public:
     typedef T random_type;
     typedef This Scalar;
 
-    // typedef GC::BGIN19Secret bit_type;
-    typedef GC::SemiHonestRepSecret bit_type;
+    typedef GC::MaliciousRepSecret bit_type;
 
     // indicate security relevance of field size
     typedef T mac_key_type;

@@ -29,11 +29,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     size_t k = OnlineOptions::singleton.k_size; 
     size_t k2 = OnlineOptions::singleton.k2_size;
 
-    #ifdef DEBUG_OURS
-        cout << "in _prove" << endl;
-        // cout << "batch_size: " << T << ", s: " << s << endl;
-    #endif
-
     vector<vector<Field>> p_evals_masked;
     size_t k_max = k > k2 ? k : k2;
     // Evaluations of polynomial p(X)
@@ -65,7 +60,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     LocalHash transcript_hash;
     transcript_hash.append_one_msg(sid);
 
-    // cout << "cp 1.5" << endl;
 
     ShareTupleBlock quarter_k_blocks[k];
     // works for binary_batch_size % BLOCK_SIZE = 0
@@ -75,8 +69,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     size_t total_blocks_num = (batch_size - 1) / BLOCK_SIZE + 1;
     // assuming k % 4 = 0
     size_t quarter_k = k / 4;
-    // cout << "block_cols_num: " << block_cols_num << endl;
-    // cout << "total_blocks_num: " << total_blocks_num << endl;
 
     size_t padded_s = block_cols_num * BLOCK_SIZE;
     s = padded_s;
@@ -94,7 +86,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         }
         
         for(size_t i = 0; i < quarter_k; i++) { 
-            // cout << "i:" << i << endl;
 
             ShareTupleBlock row_block = quarter_k_blocks[i];
             long a = row_block.input1.first;
@@ -110,8 +101,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 long f = col_block.rho.second;
 
                 Field sum1, sum2, sum = 0;
-                // Field sum = 0;
-
                 for(size_t row_entry_id = 0; row_entry_id < 4; row_entry_id++) {
                     for(size_t col_entry_id = 0; col_entry_id < 4; col_entry_id++) {
                     long tmp1 = 0, tmp2, tmp3, tmp4;
@@ -143,11 +132,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 sum1 = -2 * (tmp1 >> 32) + 4 * ((tmp2 >> 32) + (tmp3 >> 32)) - 8 * (tmp4 >> 32) + Mersenne::PR;
                                 sum2 = -2 * (tmp1 & 0xFFFFFFFF) + 4 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) - 8 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
                                 sum = Mersenne::modp(sum1 + sum2);
-
-                                // sum = Mersenne::neg(2 * ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
-                                // sum += 4 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF));
-                                // sum += 4 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF));
-                                // sum += Mersenne::neg(8 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
                                 
                                 break;
                             }
@@ -178,11 +162,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 sum1 = (tmp1 >> 32) - 2 * ((tmp2 >> 32) + (tmp3 >> 32)) + 4 * (tmp4 >> 32) + Mersenne::PR;
                                 sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
                                 sum = Mersenne::modp(sum1 + sum2);
-
-                                // sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
-                                // sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
-                                // sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
-                                // sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
                                 
                                 break;
                             }
@@ -214,11 +193,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 sum1 = (tmp1 >> 32) - 2 * ((tmp2 >> 32) + (tmp3 >> 32)) + 4 * (tmp4 >> 32) + Mersenne::PR;
                                 sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
                                 sum = Mersenne::modp(sum1 + sum2);
-
-                                // sum = (tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF);
-                                // sum += Mersenne::neg(2 * ((tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF)));
-                                // sum += Mersenne::neg(2 * ((tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF)));
-                                // sum += 4 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF));
                                 
                                 break;
                             }
@@ -250,11 +224,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                                 sum1 = (tmp1 >> 32) - 2 * ((tmp2 >> 32) + (tmp3 >> 32)) + 4 * (tmp4 >> 32) + Mersenne::PR;
                                 sum2 = (tmp1 & 0xFFFFFFFF) - 2 * ((tmp2 & 0xFFFFFFFF) + (tmp3 & 0xFFFFFFFF)) + 4 * (tmp4 & 0xFFFFFFFF) + Mersenne::PR;
                                 sum = Mersenne::mul(neg_two_inverse, Mersenne::modp(sum1 + sum2));
-                                
-                                // sum = Mersenne::mul(neg_two_inverse, ((tmp1 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
-                                // sum += (tmp2 >> 32) + (tmp2 & 0x00000000FFFFFFFF);
-                                // sum += (tmp3 >> 32) + (tmp3 & 0x00000000FFFFFFFF);
-                                // sum += Mersenne::neg(2 * ((tmp4 >> 32) + (tmp1 & 0x00000000FFFFFFFF)));
 
                                 break; 
                             }
@@ -276,7 +245,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         eval_p_poly[i + k] = 0;
         for(size_t j = 0; j < k; j++) {
             for (size_t l = 0; l < k; l++) {
-                // eval_p_poly[i + k] += base[i][j] * eval_result[j][l] * base[i][l];
                 eval_p_poly[i + k] = Mersenne::add(eval_p_poly[i + k], Mersenne::mul(base[i][j], Mersenne::mul(eval_result[j][l], base[i][l])));
             }
         }
@@ -293,25 +261,19 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
     vector<Field> ss(2 * k - 1);       
     for(size_t i = 0; i < 2 * k - 1; i++) {           
-        // ss[i] = eval_p_poly[i] - masks[cnt][i];
         ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt][i]);
     }
     p_evals_masked.push_back(ss);
 
-    // cout << "cp 2" << endl;
-
     transcript_hash.append_msges(ss);
     Field r = transcript_hash.get_challenge();
 
-    Langrange::evaluate_bases(k, r, eval_base);
+    Lagrange::evaluate_bases(k, r, eval_base);
 
     s *= 4;
     size_t s0 = s;
     // use k2 as the compression parameter from the second round
     s = (s - 1) / k2 + 1;
-
-    // cout << "s: " << s << endl;
-    // cout << "k2: " << k2 << endl;
 
     Field **input_left, **input_right;
     input_left = new Field*[k2];
@@ -337,7 +299,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
     Field* input_left_table2 = new Field[table_size];
     Field* input_right_table1 = new Field[table_size]; 
     Field* input_right_table2 = new Field[table_size];
-    // bool* ace_bits = new bool[bits_num];
 
     for (size_t i = 0; i < table_size; i++) { 
         // i = 0, ..., 4095, 000000000000, ..., 111111111111, each i represents a combination of the 12 bits e^(4),c^(4),a^(4), ..., e^(1),c^(1),a^(1)
@@ -349,9 +310,9 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             // j = 0, 1, 2, 3
             // (e, c, a) = (bits_num[j * 3 + 2], bits_num[j * 3 + 1], bits_num[j * 3])
             // the same for (f, d, b)
-            bool ab = i & (1 << (j * 3)); // bug: 1 << j * 3
+            bool ab = i & (1 << (j * 3));
             bool cd = i & (1 << (j * 3 + 1));
-            bool ef = i & (1 << (j * 3 + 2)); // bug: j + 3 + 2
+            bool ef = i & (1 << (j * 3 + 2)); 
 
             left_sum1 += (ab & cd) ? ((ef ? 2 : (uint128_t)neg_two) * eval_base[id1]) : 0;
             right_sum1 += (ab & cd) ? (ef ? Mersenne::neg(eval_base[id1]) : eval_base[id1]) : 0;
@@ -433,11 +394,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             bit_blocks_right1[i * 3] = cur_block.input2.second;
             bit_blocks_right1[i * 3 + 1] = cur_block.input1.second;
             bit_blocks_right1[i * 3 + 2] = cur_block.rho.second;
-            
-            #ifdef DEBUG_OURS_CORRECTNESS_DATA
-                cout << "cur_block.input1.first (left): " << cur_block.input1.first << endl;
-                cout << "cur_block.input2.second (right): " << cur_block.input2.second << endl;
-            #endif
 
             cur_block = quarter_k_blocks[i + quarter_k / 2];
 
@@ -473,7 +429,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 size_t col = cur_index % s;
 
                 if (cur_index >= s0) {
-                    // cout << "cp 4" << endl;
                     if (row >= k2)
                         break;
                     else {
@@ -511,11 +466,9 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         start = std::chrono::high_resolution_clock::now();
     #endif
 
-    Langrange::get_bases(k2, base);
+    Lagrange::get_bases(k2, base);
 
     while(true){
-        // auto start = std::chrono::high_resolution_clock::now();
-
         for(size_t i = 0; i < k2; i++) {
             for(size_t j = 0; j < k2; j++) {
                 eval_result[i][j] = Mersenne::inner_product(input_left[i], input_right[j], s);
@@ -530,7 +483,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
             eval_p_poly[i + k2] = 0;
             for(size_t j = 0; j < k2; j++) {
                 for (size_t l = 0; l < k2; l++) {
-                    // eval_p_poly[i + k] += base[i][j] * eval_result[j][l] * base[i][l];
                     eval_p_poly[i + k2] = Mersenne::add(eval_p_poly[i + k2], Mersenne::mul(base[i][j], Mersenne::mul(eval_result[j][l], base[i][l])));
                 }
             }
@@ -538,25 +490,21 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
 
         vector<Field> ss(2 * k2 - 1);       
         for(size_t i = 0; i < 2 * k2 - 1; i++) {           
-            // ss[i] = eval_p_poly[i] - masks[cnt][i];
-            // cout << "i" << i << endl;
             ss[i] = Mersenne::sub(eval_p_poly[i], masks[cnt][i]);
         }
         p_evals_masked.push_back(ss);
 
         if (s == 1) {
-            // cout << "breaking" << endl;
             break;
         }
         
         transcript_hash.append_msges(ss);
         Field r = transcript_hash.get_challenge();
 
-        Langrange::evaluate_bases(k2, r, eval_base);
+        Lagrange::evaluate_bases(k2, r, eval_base);
 
         s0 = s;
         s = (s - 1) / k2 + 1;
-        // cout << "cp 3, s: " << s << endl;
        
         for(size_t i = 0; i < k2; i++) {
             for(size_t j = 0; j < s; j++) {
@@ -565,14 +513,12 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 if (index < s0) {
                     uint128_t temp_result = 0;
                     for(size_t l = 0; l < k2; l++) {
-                        // temp_result += eval_base[l] * input_left[l][index];
                         temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_left[l][index]);
                     }
                     input_left[i][j] = Mersenne::modp_128(temp_result);
 
                     temp_result = 0;
                     for(size_t l = 0; l < k2; l++) {
-                        // temp_result += eval_base[l] * input_right[l][index];
                         temp_result += ((uint128_t) eval_base[l]) * ((uint128_t) input_right[l][index]);
                     }
                     input_right[i][j] = Mersenne::modp_128(temp_result);
@@ -584,7 +530,6 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
                 }
             }
         }
-        // cout << "cp 4" << endl;
         cnt++;
     }
 
@@ -593,32 +538,30 @@ DZKProof Malicious3PCProtocol<_T>::_prove(
         cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
     #endif
 
-    // cout << "cp 3" << endl;
+    for(size_t i = 0; i < k; i++) {
+        delete[] eval_result[i];
+    }
+    delete[] eval_result;
+    delete[] eval_p_poly;
 
-    // for(size_t i = 0; i < k; i++) {
-    //     delete[] eval_result[i];
-    // }
-    // delete[] eval_result;
-    // delete[] eval_p_poly;
+    for (size_t i = 0; i < k - 1; i++) {
+        delete[] base[i];
+    }
+    delete[] base;
+    delete[] eval_base;
 
-    // for (size_t i = 0; i < k - 1; i++) {
-    //     delete[] base[i];
-    // }
-    // delete[] base;
-    // delete[] eval_base;
+    for(size_t i = 0; i < k; i++) {
+        delete[] input_left[i];
+        delete[] input_right[i];
+    }
 
-    // for(size_t i = 0; i < k; i++) {
-    //     delete[] input_left[i];
-    //     delete[] input_right[i];
-    // }
+    delete[] input_left;
+    delete[] input_right;
 
-    // delete[] input_left;
-    // delete[] input_right;
-
-    // for (size_t j = 0; j < cnt; j ++) {
-    //     delete[] masks[j];
-    // }
-    // delete[] masks;
+    for (size_t j = 0; j < cnt; j ++) {
+        delete[] masks[j];
+    }
+    delete[] masks;
 
     DZKProof proof = {
         p_evals_masked,
@@ -636,7 +579,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     size_t prover_ID,
     size_t party_ID
 ) {
-    // cout << "in _gen_vermsg " << endl;
     size_t k = OnlineOptions::singleton.k_size;
     size_t k2 = OnlineOptions::singleton.k2_size;
 
@@ -671,11 +613,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
     bool prev_party = ((int64_t)(party_ID + 1 - prover_ID)) % 3 == 0;
 
-    #ifdef DEBUG_OURS_CORRECTNESS
-        if (prev_party) cout << endl << "prev_party" << endl;
-        else cout << endl << "next_party" << endl;
-    #endif 
-
     if (prev_party) {
         out_ss = Mersenne::mul(neg_two_inverse, two_powers * batch_size);
         for(size_t i = 0; i < 2 * k - 1; i++) { 
@@ -696,9 +633,8 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     b_ss[cnt] = Mersenne::sub(sum_ss, out_ss);
     
     // new evaluations at random point r
-
     Field r = transcript_hash.get_challenge();
-    Langrange::evaluate_bases(k, r, eval_base);
+    Lagrange::evaluate_bases(k, r, eval_base);
 
     size_t start_point = (node_id % (ZOOM_RATE * OnlineOptions::singleton.max_status)) * OnlineOptions::singleton.binary_batch_size / BLOCK_SIZE;
     size_t block_cols_num = (s - 1) / BLOCK_SIZE + 1;
@@ -715,8 +651,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
     s = (s - 1) / k2 + 1;
     size_t index = 0;
  
-    // cout << "cp 3" << endl;
-
     Field **input = new Field*[k2];
     for(size_t i = 0; i < k2; i++) {
         input[i] = new Field[s];
@@ -733,10 +667,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         auto start = std::chrono::high_resolution_clock::now(), end = start;
     #endif
 
-    // uint32_t* shift_table = new uint32_t[quarter_k / 2 * 3];
-    // for (size_t i = 0; i < quarter_k / 2 * 3; i++) {
-    //     shift_table[i] = 1 << i;
-    // }
 
     if (prev_party) {
         // Right Part
@@ -781,7 +711,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         long* bit_blocks_right2 = new long[bits_num];
 
         for (size_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-            // cout << "block_col_id: " << block_col_id << endl;
 
             // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
             if (block_col_id == block_cols_num * 4 - 1 && total_blocks_num - cur_quarter_k_blocks_id < quarter_k) {
@@ -831,7 +760,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     size_t col = cur_index % s;
 
                     if (cur_index >= s0) {
-                        // cout << "cp 4" << endl;
                         if (row >= k2)
                             break;
                         else {
@@ -853,7 +781,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                 }
             }
 
-            index += 64;
+            index += BLOCK_SIZE;
             cur_quarter_k_blocks_id += quarter_k;
         }
     }
@@ -900,7 +828,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         long* bit_blocks_left2 = new long[bits_num];
 
         for (size_t block_col_id = 0; block_col_id < block_cols_num * 4; block_col_id ++) {
-            // cout << "block_col_id: " << block_col_id << endl;
 
             // fetch k/4 tuple_blocks, containing k / 4 * BLOCKSIZE bit tuples
             memcpy(quarter_k_blocks, share_tuple_blocks + start_point + cur_quarter_k_blocks_id, sizeof(ShareTupleBlock) * min(quarter_k, total_blocks_num - cur_quarter_k_blocks_id));
@@ -943,7 +870,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                     size_t col = cur_index % s;
 
                     if (cur_index >= s0) {
-                        // cout << "cp 4" << endl;
                         if (row >= k2)
                             break;
                         else {
@@ -964,7 +890,7 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
                 }
             }
 
-            index += 64;
+            index += BLOCK_SIZE;
             cur_quarter_k_blocks_id += quarter_k;
         }
     }
@@ -977,8 +903,6 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
 
         start = std::chrono::high_resolution_clock::now();
     #endif
-
-    // cout << "cp 4" << endl;
 
     while(true)
     {
@@ -999,31 +923,30 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         }
 
         r = transcript_hash.get_challenge();
-        Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
+        Lagrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
         uint128_t temp_result = 0;
         for(size_t i = 0; i < 2 * k2 - 1; i++) {
             temp_result += (uint128_t)eval_base_2k[i] * (uint128_t)proof.p_evals_masked[cnt][i];
         }
         out_ss = Mersenne::modp_128(temp_result);
 
-        // b_ss[cnt] = sum_ss - out_ss;
         b_ss[cnt] = Mersenne::sub(sum_ss, out_ss);
 
         if(s == 1) {
             r = transcript_hash.get_challenge();
-            Langrange::evaluate_bases(k2, r, eval_base);
+            Lagrange::evaluate_bases(k2, r, eval_base);
             
             for(size_t i = 0; i < k2; i++) {
                 final_input += eval_base[i] * input[i][0];
             }
-            Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
+            Lagrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
 
             final_result_ss = Mersenne::inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
 
             break;
         }
 
-        Langrange::evaluate_bases(k2, r, eval_base);
+        Lagrange::evaluate_bases(k2, r, eval_base);
         s0 = s;
         s = (s - 1) / k2 + 1;
         for(size_t i = 0; i < k2; i++) {
@@ -1050,24 +973,21 @@ VerMsg Malicious3PCProtocol<_T>::_gen_vermsg(
         cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
     #endif
 
-    // cout << "cp 5" << endl;
+    delete[] eval_base;
+    delete[] eval_base_2k;
 
-    // delete[] eval_base;
-    // delete[] eval_base_2k;
+    delete[] input;
 
-    // delete[] input;
-
-    // for (size_t j = 0; j < cnt; j ++) {
-    //     delete[] masks_ss[j];
-    // }
-    // delete[] masks_ss;
+    for (size_t j = 0; j < cnt; j ++) {
+        delete[] masks_ss[j];
+    }
+    delete[] masks_ss;
 
     VerMsg vermsg(
         b_ss,
         final_input,
         final_result_ss
     );
-    // cout << "cp 6" << endl;
 
     return vermsg;
 }
@@ -1083,7 +1003,6 @@ bool Malicious3PCProtocol<_T>::_verify(
     size_t prover_ID,
     size_t party_ID
 ) {
-    // cout << "in _verify..." << endl;
     size_t k = OnlineOptions::singleton.k_size;
     size_t k2 = OnlineOptions::singleton.k2_size;
     
@@ -1094,23 +1013,19 @@ bool Malicious3PCProtocol<_T>::_verify(
     VerMsg self_vermsg = _gen_vermsg(proof, node_id, masks_ss, batch_size, sid, prover_ID, party_ID);
 
     Field b;
-    // cout << "in _verify, cp 1" << endl;
     for(size_t i = 0; i < len; i++) {
-        // b = self_vermsg.b_ss[i] + other_vermsg.b_ss[i];
         b = Mersenne::add(self_vermsg.b_ss[i], other_vermsg.b_ss[i]);
         
-        if(b != 0) {    
+        if(!b) {    
             return false;
         }
     }
-    // cout << "in _verify, cp 2" << endl;
 
-    // Field res = self_vermsg.final_input + other_vermsg.final_input;
-    // Field p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
     Field res = Mersenne::mul(self_vermsg.final_input, other_vermsg.final_input);
     Field p_eval_r = Mersenne::add(self_vermsg.final_result_ss, other_vermsg.final_result_ss);
     
-    if(res != p_eval_r) {   
+    Field diff = res - p_eval_r;
+    if(!diff) {   
         return false;
     } 
 

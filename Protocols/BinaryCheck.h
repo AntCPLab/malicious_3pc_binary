@@ -146,13 +146,13 @@ struct VerMsg {
     }
 };
 
-class Langrange {
+class Lagrange {
 public:
     static void get_bases(uint64_t n, Field** result);
     static void evaluate_bases(uint64_t n, Field r, Field* result);
 };
 
-inline void Langrange::get_bases(uint64_t n, Field** result) {
+inline void Lagrange::get_bases(uint64_t n, Field** result) {
     for (uint64_t i = 0; i < n - 1; i++) {
         for(uint64_t j = 0; j < n; j++) {
             result[i][j] = 1;
@@ -173,7 +173,7 @@ inline void Langrange::get_bases(uint64_t n, Field** result) {
     }
 }
 
-inline void Langrange::evaluate_bases(uint64_t n, Field r, Field* result) {
+inline void Lagrange::evaluate_bases(uint64_t n, Field r, Field* result) {
     for(uint64_t i = 0; i < n; i++) {
         result[i] = 1;
         for(uint64_t j = 0; j < n; j++) {

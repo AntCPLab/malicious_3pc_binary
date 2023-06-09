@@ -106,34 +106,11 @@ void Malicious3PCProtocol<T>::init_mul()
 	for (auto& o : os)
         o.reset_write_head();
     add_shares.clear();
-
-    // cout << "local_counter: " << local_counter << endl;
 }
 
 template <class T>
 void Malicious3PCProtocol<T>::finalize_check() {
 
-    // cout << "in finalize_check" << endl;
-
-    // for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-    //     cv.push(-1);
-    // }
-    
-    // for (auto &each_thread: check_threads) {
-    //     each_thread.join();
-    // }
-
-    // if (local_counter > 0) {
-    //     // cout << "local_counter = " << local_counter << endl;
-    //     Check_one(status_pointer, local_counter);
-    //     status_counter ++;
-    // }
-
-    // if (status_counter > 0) {
-    //     // cout << "status_counter = " << status_counter << endl;
-    //     verify();
-    // }
-    
 }
 
 #ifdef TIMING
@@ -181,12 +158,7 @@ void Malicious3PCProtocol<T>::thread_handler() {
             break;
         }
 
-        // auto cp0 = std::chrono::high_resolution_clock::now();
         Check_one(_);
-        // auto cp1 = std::chrono::high_resolution_clock::now();
-        // cout << "Check_one uses " << (cp1 - cp0).count() / 1e6 << "ms." << endl;
-    
-        
     }
     return ;
 }
@@ -201,8 +173,6 @@ void Malicious3PCProtocol<T>::verify_part1(int prev_number, int my_number) {
     verify_lock.unlock();
 
     size_t sz = status_queue[i].sz;
-    // int k = OnlineOptions::singleton.k_size;
-    // int cnt = log(4 * sz) / log(k) + 1;
 
     #ifdef TIMING
     auto cp1 = std::chrono::high_resolution_clock::now();
@@ -231,9 +201,7 @@ void Malicious3PCProtocol<T>::verify_part2(int next_number, int my_number) {
     verify_lock.unlock();
 
     size_t sz = status_queue[i].sz;
-    // int k = OnlineOptions::singleton.k_size;
 
-    // int cnt = log(4 * sz) / log(k) + 1;
     #ifdef TIMING
     auto cp1 = std::chrono::high_resolution_clock::now();
     #endif
@@ -322,9 +290,6 @@ void Malicious3PCProtocol<T>::verify_thread_handler() {
 template <class T>
 void Malicious3PCProtocol<T>::verify() {
 
-    // cout << "in Malicious3PCProtocol::verify, this->bit_counter: " << this->bit_counter << endl;
-    // cout << "in Malicious3PCProtocol::verify, this->bit_counter_aligned: " << this->bit_counter_aligned << endl;
-
     // ofstream outfile;
     // outfile.open("logs/Verify_" + to_string(P.my_real_num()), ios::app);
     
@@ -345,7 +310,6 @@ void Malicious3PCProtocol<T>::verify() {
     // outfile << "Verify with size " << size << endl;
 
     verify_index = 0;
-    check_passed = true;
     verify_tag.reset();
     verify_tag.set_target(size);
 
@@ -393,10 +357,6 @@ void Malicious3PCProtocol<T>::verify() {
     }
 
     verify_tag.wait();
-    // if (!check_passed) {
-    //     throw mac_fail("Check failed");
-    //     // cout << "Check failed" << endl;
-    // }
 
     // auto cp4 = std::chrono::high_resolution_clock::now();
     // outfile << "Verify uses " << (cp4 - cp3).count() / 1e6 << "ms." << endl;
@@ -415,12 +375,9 @@ void Malicious3PCProtocol<T>::Check_one(size_t node_id, int size) {
 
     // auto cp0 = std::chrono::high_resolution_clock::now();
 
-    // cout << "in Check_one" << node_id << endl;
-
     if (size == 0)  return ;
     size_t ms = OnlineOptions::singleton.max_status;
 
-    // size_t start = (node_id % (ZOOM_RATE * ms)) * OnlineOptions::singleton.binary_batch_size;
     if (size == -1) size = OnlineOptions::singleton.binary_batch_size;
 
     size_t sz = size;
@@ -446,52 +403,30 @@ void Malicious3PCProtocol<T>::Check_one(size_t node_id, int size) {
     mask_ss_next[0] = new Field[2 * k - 1];
     mask_ss_prev[0] = new Field[2 * k - 1];
 
-    #ifdef DEBUG_OURS_CORRECTNESS
-        for (int j = 0; j < 2 * k - 1; j ++) {
-            mask_ss_next[0][j] = 0;
-            mask_ss_prev[0][j] = 0;
-            masks[0][j] = 0;
-        }
+    
+    for (size_t j = 0; j < 2 * k - 1; j ++) {
+        mask_ss_next[0][j] = Mersenne::randomize(check_prngs[node_id % ms][1]);
+        mask_ss_prev[0][j] = Mersenne::randomize(check_prngs[node_id % ms][0]);
+        masks[0][j] = Mersenne::add(mask_ss_next[0][j], mask_ss_prev[0][j]);
+    }
         
-        for (int i = 1; i < cnt; i++) {
-            masks[i] = new Field[2 * k - 1];
-            mask_ss_next[i] = new Field[2 * k - 1];
-            mask_ss_prev[i] = new Field[2 * k - 1];
+    for (size_t i = 1; i < cnt; i++) {
+        masks[i] = new Field[2 * k2 - 1];
+        mask_ss_next[i] = new Field[2 * k2 - 1];
+        mask_ss_prev[i] = new Field[2 * k2 - 1];
 
-            for (int j = 0; j < 2 * k - 1; j ++) {
-                mask_ss_next[i][j] = 0;
-                mask_ss_prev[i][j] = 0;
-                masks[i][j] = 0;
-            }
+        for (size_t j = 0; j < 2 * k2 - 1; j ++) {
+            mask_ss_next[i][j] = Mersenne::randomize(check_prngs[node_id % ms][1]);
+            mask_ss_prev[i][j] = Mersenne::randomize(check_prngs[node_id % ms][0]);
+            masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
         }
-    #else
-        for (size_t j = 0; j < 2 * k - 1; j ++) {
-            mask_ss_next[0][j] = Mersenne::randomize(check_prngs[node_id % ms][1]);
-            mask_ss_prev[0][j] = Mersenne::randomize(check_prngs[node_id % ms][0]);
-            masks[0][j] = Mersenne::add(mask_ss_next[0][j], mask_ss_prev[0][j]);
-        }
-        
-        for (size_t i = 1; i < cnt; i++) {
-            masks[i] = new Field[2 * k2 - 1];
-            mask_ss_next[i] = new Field[2 * k2 - 1];
-            mask_ss_prev[i] = new Field[2 * k2 - 1];
-
-            for (size_t j = 0; j < 2 * k2 - 1; j ++) {
-                mask_ss_next[i][j] = Mersenne::randomize(check_prngs[node_id % ms][1]);
-                mask_ss_prev[i][j] = Mersenne::randomize(check_prngs[node_id % ms][0]);
-                masks[i][j] = Mersenne::add(mask_ss_next[i][j], mask_ss_prev[i][j]);
-            }
-        }
-    #endif
+    }
 
     #ifdef TIMING
     auto cp2 = std::chrono::high_resolution_clock::now();
     #endif
-    // cout << "Prepare data uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
+    // outfile << "Prepare data uses " << (cp2 - cp1_5).count() / 1e6 << "ms." << endl;
 
-
-    // outfile << "in Check_one, calling prove" << endl;
-    // DZKProof proof = _prove(input_left, input_right, masks, sz, k, sid, global_prng);
     DZKProof proof = _prove(node_id, masks, sz, sid);
 
     #ifdef TIMING
@@ -508,12 +443,9 @@ void Malicious3PCProtocol<T>::Check_one(size_t node_id, int size) {
                                        mask_ss_prev,
                                        sz);
 
-    // outfile << "in Check_one, ++wait_size" << endl;
     ++wait_size;
-    // outfile << "in Check_one, after ++wait_size" << endl;
 
     // outfile << "Finish check" << endl;
-    
 }
 
 
@@ -542,7 +474,6 @@ void Malicious3PCProtocol<T>::prepare_reshare(const typename T::clear& share,
     typename T::value_type tmp[2];
     for (int i = 0; i < 2; i++) 
         tmp[i].randomize(shared_prngs[i], n);
-    
 
     share_tuple_blocks[idx_rho].rho = ShareTypeBlock(tmp[0].get(), tmp[1].get());
     idx_rho ++;
@@ -588,36 +519,10 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
 
     this->counter++;
     this->bit_counter += this_size;
-    // this->bit_counter_aligned += T::value_type::length();
 
     T result;
     result[0] = add_shares.next();
     result[1].unpack(os[1], n);
-
-    // cout << "n: " << n << ", this_size: " << this_size << endl;
-    // if (this_size != T::value_type::length()) {
-    //     cout << "n: " << n << ", this_size: " << this_size << endl;
-    // }
-
-    // if (n == 1) {
-    //     cout << "n == 1, result[0].get(): " << result[0].get() << endl;
-    //     // cout << "T: " << typeid(T).name() << endl;
-    // } else if (n == 2) {
-    //     cout << "n == 2, result[0].get(): " << result[0].get() << endl;
-    //     // cout << "T: " << typeid(T).name() << endl;
-    // } else if (n == 11) {
-    //     cout << "n == 11, result[0].get(): " << result[0].get() << endl;
-    //     // cout << "T: " << typeid(T).name() << endl;
-    // } else if (n == 21) {
-    //     cout << "n == 21, result[0].get(): " << result[0].get() << endl;
-    //     // cout << "T: " << typeid(T).name() << endl;
-    // } else if (n == 52) {
-    //     cout << "n == 52, result[0].get(): " << result[0].get() << endl;
-    //     // cout << "T: " << typeid(T).name() << endl;
-    // } else if (n == 63) {
-    //     cout << "n == 63, result[0].get(): " << result[0].get() << endl;
-    //     // cout << "T: " << typeid(T).name() << endl;
-    // }
 
     share_tuple_blocks[idx_result].result = ShareTypeBlock(result[0].get(), result[1].get());
 
@@ -634,15 +539,11 @@ inline T Malicious3PCProtocol<T>::finalize_mul(int n)
         idx_result = 0;
     }
     
-    // this->local_counter += this_size;
-    // TODO: optimize
     this->local_counter += T::value_type::length(); 
     
     // auto start = std::chrono::high_resolution_clock::now();
     while (local_counter >= (size_t) OnlineOptions::singleton.binary_batch_size) {
         local_counter -= OnlineOptions::singleton.binary_batch_size;     
-        
-        // cout << "Indexes are: " << idx_input << " " << idx_rho << " " << idx_result << endl;
         
         cv.push(status_pointer);
 

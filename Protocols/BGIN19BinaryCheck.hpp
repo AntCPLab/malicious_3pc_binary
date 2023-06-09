@@ -19,12 +19,9 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     size_t k = OnlineOptions::singleton.k_size;
     size_t k2 = OnlineOptions::singleton.k2_size;
 
-    // cout << "batch_size: " << T << ", s: " << s << endl;
-
     // Vectors of masked evaluations of polynomial p(X)
     vector<vector<BGIN19Field>> p_evals_masked;
     size_t k_max = k > k2 ? k : k2;
-    // cout << "k: " << k << ", k2: " << k2 << ", k_max: " << k_max << endl;
 
     // Evaluations of polynomial p(X)
     BGIN19Field* eval_p_poly = new BGIN19Field[2 * k_max - 1];  
@@ -68,7 +65,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     size_t padded_s = block_cols_num * BLOCK_SIZE;
 
     // bs = 6400, s = 800 -> 832
-    s = padded_s; // key bug
+    s = padded_s;
 
     BGIN19Field* thetas = new BGIN19Field[s];
     for(size_t j = 0; j < s; j++) {
@@ -78,7 +75,6 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
 
         // fetch k tuple_blocks
-        // memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
         if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
             memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
             for (size_t i = total_blocks_num - cur_k_blocks; i < k; i++)
@@ -111,7 +107,7 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
         eval_p_poly[i] = eval_result[i][i];
     }
 
-    BGIN19Langrange::get_bases(k, base);
+    BGIN19Lagrange::get_bases(k, base);
 
     for(size_t i = 0; i < k - 1; i++) {
         eval_p_poly[i + k] = 0;
@@ -140,13 +136,12 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
 
     // ===============================  Following Rounds  ===============================
 
-    // cout << "checkpoint 2" << endl;
     transcript_hash.append_msges(ss);
     BGIN19Field r = transcript_hash.get_challenge();
 
     cnt++;
 
-    BGIN19Langrange::evaluate_bases(k, r, eval_base);
+    BGIN19Lagrange::evaluate_bases(k, r, eval_base);
 
     s *= 2;
     size_t s0 = s;
@@ -188,7 +183,6 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
     for (size_t block_col = 0; block_col < block_cols_num; block_col ++) {
 
         // fetch k tuple_blocks, containing k * BLOCKSIZE bit tuples
-        // memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * min(k, total_blocks_num - cur_k_blocks));
         if (block_col == block_cols_num - 1 && total_blocks_num - cur_k_blocks < k) {
             memcpy(k_share_tuple_blocks, share_tuple_blocks + start_point + cur_k_blocks, sizeof(BGIN19ShareTupleBlock) * (total_blocks_num - cur_k_blocks));
             for (size_t i = total_blocks_num - cur_k_blocks; i < k; i++)
@@ -262,13 +256,12 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
         start = std::chrono::high_resolution_clock::now();
     #endif
 
-    BGIN19Langrange::get_bases(k2, base);
+    BGIN19Lagrange::get_bases(k2, base);
 
     while(true){
 
         for(size_t i = 0; i < k2; i++) {
             for(size_t j = 0; j < k2; j++) {
-                // cout << "cp 1.5, i: " << i << ", j: " << j << endl;
                 eval_result[i][j] = inner_product(input_left[i], input_right[j], s);
             }
         }
@@ -299,12 +292,10 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
         transcript_hash.append_msges(ss);
         r = transcript_hash.get_challenge();
 
-        BGIN19Langrange::evaluate_bases(k2, r, eval_base);
+        BGIN19Lagrange::evaluate_bases(k2, r, eval_base);
 
         s0 = s;
         s = (s - 1) / k2 + 1;
-
-        // cout << "cp 5" << endl;
        
         for(size_t i = 0; i < k2; i++) {
             for(size_t j = 0; j < s; j++) {
@@ -331,13 +322,37 @@ BGIN19DZKProof BGIN19Protocol<_T>::_prove(
         }
 
         cnt++;
-
     }
 
     #ifdef TIMING
         end = std::chrono::high_resolution_clock::now();
         cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
     #endif
+
+    for(size_t i = 0; i < k; i++) {
+        delete[] eval_result[i];
+    }
+    delete[] eval_result;
+    delete[] eval_p_poly;
+
+    for (size_t i = 0; i < k - 1; i++) {
+        delete[] base[i];
+    }
+    delete[] base;
+    delete[] eval_base;
+
+    for(size_t i = 0; i < k; i++) {
+        delete[] input_left[i];
+        delete[] input_right[i];
+    }
+
+    delete[] input_left;
+    delete[] input_right;
+
+    for (size_t j = 0; j < cnt; j ++) {
+        delete[] masks[j];
+    }
+    delete[] masks;
 
     BGIN19DZKProof proof = {
         p_evals_masked,
@@ -356,7 +371,6 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     size_t party_ID,
     PRNG prng
 ) {
-    // cout << "in _gen_vermsg " << endl;
     size_t k = OnlineOptions::singleton.k_size;
     size_t k2 = OnlineOptions::singleton.k2_size;
 
@@ -475,7 +489,7 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     
     b_ss[cnt] = sum_ss - out_ss;
 
-    BGIN19Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
+    BGIN19Lagrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
     out_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
 
     #ifdef TIMING
@@ -488,8 +502,7 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     // ===============================  Following Rounds  ===============================
 
     // new evaluations at random point r
-
-    BGIN19Langrange::evaluate_bases(k, r, eval_base);
+    BGIN19Lagrange::evaluate_bases(k, r, eval_base);
 
     s *= 2;
     size_t s0 = s;
@@ -674,12 +687,12 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
         if (s == 1) {
             r = transcript_hash.get_challenge();
 
-            BGIN19Langrange::evaluate_bases(k2, r, eval_base);
+            BGIN19Lagrange::evaluate_bases(k2, r, eval_base);
             for(size_t i = 0; i < k2; i++) {
                 final_input += eval_base[i] * input[i][0];
             }
 
-            BGIN19Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
+            BGIN19Lagrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
             final_result_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
 
             break;
@@ -687,10 +700,10 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
         
         r = transcript_hash.get_challenge();
 
-        BGIN19Langrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
+        BGIN19Lagrange::evaluate_bases(2 * k2 - 1, r, eval_base_2k);
         out_ss = inner_product(eval_base_2k, proof.p_evals_masked[cnt], (2 * k2 - 1));
 
-        BGIN19Langrange::evaluate_bases(k2, r, eval_base);
+        BGIN19Lagrange::evaluate_bases(k2, r, eval_base);
 
         s0 = s;
         s = (s - 1) / k2 + 1;
@@ -718,30 +731,23 @@ BGIN19VerMsg BGIN19Protocol<_T>::_gen_vermsg(
     end = std::chrono::high_resolution_clock::now();
     cout << "Recursion uses: " << (end - start).count() / 1e6 << " ms" << endl;
 #endif
-    // cout << "cp 5" << endl;
 
-    // delete[] eval_base;
-    // delete[] eval_base_2k;
 
-    // for(size_t i = 0; i < k; i++) {
-    //     delete[] input[i];
-    //     delete[] input[i];
-    // }
+    delete[] eval_base;
+    delete[] eval_base_2k;
 
-    // delete[] input;
-    // delete[] input;
+    delete[] input;
 
-    // for (size_t j = 0; j < cnt; j ++) {
-    //     delete[] masks_ss[j];
-    // }
-    // delete[] masks_ss;
+    for (size_t j = 0; j < cnt; j ++) {
+        delete[] masks_ss[j];
+    }
+    delete[] masks_ss;
 
     BGIN19VerMsg vermsg(
         b_ss,
         final_input,
         final_result_ss
     );
-    // cout << "cp 6" << endl;
 
     return vermsg;
 }
@@ -770,17 +776,17 @@ bool BGIN19Protocol<_T>::_verify(
     BGIN19Field b;
 
     for(size_t i = 0; i < len; i++) {
-        // Todo: Linear combination on all b_ss
         b = self_vermsg.b_ss[i] + other_vermsg.b_ss[i];
         
-        if(!b.is_zero()) {    
+        if(b != 0) {    
             return false;
         }
     }
     BGIN19Field res = self_vermsg.final_input * other_vermsg.final_input;
     BGIN19Field p_eval_r = self_vermsg.final_result_ss + other_vermsg.final_result_ss;
     
-    if(res != p_eval_r) {  
+    BGIN19Field diff = res - p_eval_r;
+    if(diff != 0) {  
         return false;
     } 
 

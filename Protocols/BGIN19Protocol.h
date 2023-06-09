@@ -75,7 +75,7 @@ class BGIN19Protocol : public ProtocolBase<T> {
     BGIN19VerMsg *vermsgs;
     WaitQueue<u_char> verify_queue;
     WaitSize verify_tag;
-    bool check_passed;
+    bool check_passed = true;
 
     template<class U>
     void trunc_pr(const vector<int>& regs, int size, U& proc, true_type);
@@ -97,9 +97,6 @@ public:
     BGIN19Protocol(Player& P, array<PRNG, 2>& prngs);
     ~BGIN19Protocol() {
 
-#ifdef DEBUG_BGIN19
-    cout << "in ~BGIN19Protocol" << endl;
-#endif
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
             cv.push(-1);
         }
@@ -109,18 +106,15 @@ public:
         }
 
         if (local_counter > 0) {
-            // cout << "local_counter = " << local_counter << endl;
             Check_one(status_pointer, local_counter);
             status_counter ++;
         }
 
         if (status_counter > 0) {
-            // cout << "status_counter = " << status_counter << endl;
             verify();
         }
         
         for (int i = 0; i < OnlineOptions::singleton.thread_number; i ++) {
-            // cout << "in ~BGIN19Protocol, pushing false in cv" << endl;
             verify_queue.push(0);
         }
 
@@ -172,7 +166,6 @@ public:
         
     BGIN19Protocol branch() {
         return {P, shared_prngs};
-        // return {P, shared_prngs, check_prngs};
     }
 
     BGIN19DZKProof _prove(
