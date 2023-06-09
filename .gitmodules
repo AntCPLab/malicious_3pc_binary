@@ -1,0 +1,15 @@
+[submodule "SimpleOT"]
+	path = SimpleOT
+	url = https://github.com/mkskeller/SimpleOT
+[submodule "mpir"]
+	path = mpir
+	url = https://github.com/wbhart/mpir
+[submodule "Programs/Circuits"]
+	path = Programs/Circuits
+	url = https://github.com/mkskeller/bristol-fashion
+[submodule "simde"]
+	path = simde
+	url = https://github.com/simd-everywhere/simde
+[submodule "EzPC"]
+	path = EzPC
+	url = https://github.com/mkskeller/EzPC

@@ -1,0 +1,87 @@
+def test(actual, expected):
+
+    # you can reveal a number in order to print it
+
+    actual = actual.reveal()
+    print_ln('expected %s, got %s', expected, actual)
+
+# a = sint.get_input_from(0)
+# b = sint.get_input_from(1)
+# c = sint.get_input_from(2)
+
+# test(a * b * c, 2)
+# test(c * c, 4)
+
+# a = sint.get_input_from(0)
+# b = sint.get_input_from(1)
+# c = sint.get_input_from(2)
+
+# test(a + b * c + a * (b + c), 18)
+
+
+a = sint(145673456356235)
+b = sint(23465234652460)
+
+# # Division can mean different things in different domains
+# # and there has be a specified bit length in some,
+# # so we use int_div() for integer division.
+# # k-bit division requires (4k+1)-bit computation.
+
+# test(b.int_div(a, 15), 2)
+
+# # comparisons produce 1 for true and 0 for false
+test(a < b, 0)
+test(a <= b, 0)
+test(a >= b, 1)
+test(a > b, 1)
+test(a == b, 0)
+test(a != b, 1)
+
+# # if_else() can be used instead of branching
+# # let's find out the larger number
+# test((a < b).if_else(b, a), 2)
+
+# # arrays and loops work as follows
+
+# a = Array(100, sint)
+
+# @for_range(100)
+# def f(i):
+#     a[i] = sint(i) * sint(i - 1)
+
+# test(a[99], 99 * 98)
+
+# # if you use loops, use Array to store results
+# # don't do this
+# # @for_range(100)
+# # def f(i):
+# #     a = sint(i)
+# # test(a, 99)
+
+# sfix: fixed-point numbers
+
+# set the precision after the dot and in total
+
+sfix.set_precision(16, 31)
+
+# and the output precision in decimal digits
+
+print_float_precision(4)
+
+# you can do all basic arithmetic with sfix, including division
+
+a = sfix(2)
+b = sfix(-0.1)
+
+test(a + b, 1.9)
+test(a - b, 2.1)
+test(a * b, -0.2)
+test(a / b, -20)
+test(a < b, 0)
+test(a <= b, 0)
+test(a >= b, 1)
+test(a > b, 1)
+test(a == b, 0)
+test(a != b, 1)
+
+# test((a < b).if_else(a, b), -0.1)

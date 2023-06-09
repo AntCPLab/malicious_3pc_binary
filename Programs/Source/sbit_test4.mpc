@@ -1,0 +1,11 @@
+from Compiler.GC.types import *
+
+sb64 = sbits.get_type(64)
+
+a = sb64(10)
+b = sb64(20)
+
+ROUNDS = 1000000
+
+for i in range(ROUNDS):
+    c = a & b

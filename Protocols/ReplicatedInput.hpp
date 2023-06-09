@@ -1,0 +1,139 @@
+/*
+ * ReplicatedInput.cpp
+ *
+ */
+
+#ifndef PROTOCOLS_REPLICATEDINPUT_HPP_
+#define PROTOCOLS_REPLICATEDINPUT_HPP_
+
+#include "ReplicatedInput.h"
+#include "Processor/Processor.h"
+
+#include "Processor/Input.hpp"
+
+#include "global_debug.hpp"
+
+template <typename T>
+struct has_member_zero_share
+{
+
+	template<typename U>
+	static void check(decltype(&U::is_zero_share));
+ 
+	template<typename U>
+	static int check(...);
+
+	enum { value = std::is_void<decltype(check<T>(0))>::value };
+};
+
+
+template<class T>
+void ReplicatedInput<T>::reset(int player)
+{
+    InputBase<T>::reset(player);
+    assert(P.num_players() == 3);
+    if (player == P.my_num())
+    {
+        this->shares.clear();
+        this->i_share = 0;
+        os.resize(2);
+        for (auto& o : os)
+            o.reset_write_head();
+    }
+    expect[player] = false;
+}
+
+template<class T>
+inline void ReplicatedInput<T>::add_mine(const typename T::open_type& input, int n_bits)
+{
+
+    if (INPUT_LOG_LEVEL & SHOW_INPUT_DETAIL) {
+        cout << "Adding input " << input << endl;
+    }
+    else if (INPUT_LOG_LEVEL & SHOW_INPUT_PROCESS) {
+        cout << "ReplicatedInput<T>::add_mine(const typename T::open_type& input, int n_bits)" << endl;
+    }
+
+    auto& shares = this->shares;
+    shares.push_back({});
+    T& my_share = shares.back();
+    my_share[0].randomize(protocol.shared_prngs[0], n_bits);
+    my_share[1] = input - my_share[0];
+    my_share[1].pack(os[1], n_bits);
+    this->values_input++;
+
+    if (REPLICATED_INPUT_DEBUG)
+    {
+        cout << "ReplicatedInput::add_mine: " << my_share[0] << " + " << my_share[1] << endl;
+        cout << "Class name: " << typeid(T).name() << endl;
+    }
+}
+
+template<class T>
+void ReplicatedInput<T>::add_other(int player, int)
+{
+
+    if (INPUT_LOG_LEVEL & SHOW_INPUT_DETAIL) {
+        cout << "Adding input to " << player << endl;
+    }
+    else if (INPUT_LOG_LEVEL & SHOW_INPUT_PROCESS) {
+        cout << "ReplicatedInput<T>::add_other(int player, int)" << endl;
+    }
+
+    expect[player] = true;
+
+    if (REPLICATED_INPUT_DEBUG)
+    {
+        cout << "ReplicatedInput::add_other: " << player << endl;
+    }
+}
+
+template<class T>
+void ReplicatedInput<T>::send_mine()
+{
+    P.send_relative(os);
+    P.input_comm += os[0].get_length() + os[1].get_length();
+}
+
+template<class T>
+void ReplicatedInput<T>::exchange()
+{
+    bool receive = expect[P.get_player(1)];
+    bool send = not os[1].empty();
+    auto& dest =  InputBase<T>::os[P.get_player(1)];
+    if (send)
+        if (receive)
+            P.pass_around(os[1], dest, -1);
+        else
+            P.send_to(P.get_player(-1), os[1]);
+    else
+        if (receive)
+            P.receive_player(P.get_player(1), dest);
+}
+
+template<class T>
+inline void ReplicatedInput<T>::finalize_other(int player, T& target,
+        octetStream& o, int n_bits)
+{
+    int offset = player - this->my_num;
+    if (offset == 1 or offset == -2)
+    {
+        typename T::value_type t;
+        t.unpack(o, n_bits);
+        target[0] = t;
+        target[1] = 0;
+    }
+    else
+    {
+        target[0] = 0;
+        target[1].randomize(protocol.shared_prngs[1], n_bits);
+    }
+}
+
+template<class T>
+T PrepLessInput<T>::finalize_mine()
+{
+    return this->shares[this->i_share++];
+}
+
+#endif
