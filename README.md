@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This repo is an implementation about our work published in USENIX Sec '23. And we also implement the [BGIN19](https://eprint.iacr.org/2019/1390) protocol for comparison.
+This repo is an implementation about our work published in USENIX Sec '23. And we also implemented the [BGIN19](https://eprint.iacr.org/2019/1390) protocol for comparison.
 
-This repo is based on [MP-SPDZ](https://github.com/data61/MP-SPDZ) framework by Data61. 
+The implementations are based on [MP-SPDZ](https://github.com/data61/MP-SPDZ) framework.
 
 ## Files
 
@@ -52,5 +52,5 @@ Assume now we want to run our protocol on circuit 1M-100, with binary_batch_size
 Many of our experiments were ran in WAN setting. This is easy to do. When you run the command above, you can see that actually three commands were executed seperately, in the following format:
 `./protocol_binary.x party_id circuit_name -bb batchsize -ms maxstatus -h host -p port`
 
-So if we want to perform the three party in three different machine, we just need the ip address of party 0, and replace the host of party 0 as `0.0.0.0` and host of other parties as the ip of party0.
-And, as for the certificate, the easiest way is to copy all .pem and .key files in dir Player-Data in party 0 to other parties' same directory, and run rehash Player-Data. See official document of MP-SPDZ for detail.
+So if we want to perform the three party in three different machine, we just need the ip address of party 0, and replace the host of party 0 as `0.0.0.0` and host of other parties as the ip of party 0.
+And, as for the certificate, the easiest way is to copy all .pem and .key files in dir Player-Data in party 0 to other parties' same directory (this is not safe, but useful), and run `rehash Player-Data`. See official document of MP-SPDZ for detail.
