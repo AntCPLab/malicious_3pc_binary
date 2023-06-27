@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repo is an implementation about our work published in USENIX Sec '23. And we also implemented the [BGIN19](https://eprint.iacr.org/2019/1390) protocol for comparison.
+This repo is an implementation about [our paper](https://eprint.iacr.org/2023/909) published in USENIX Sec '23. And we also implemented the [BGIN19](https://eprint.iacr.org/2019/1390) protocol for comparison.
 
 The implementations are based on [MP-SPDZ](https://github.com/data61/MP-SPDZ) framework.
 
